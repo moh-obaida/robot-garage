@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ACHIEVEMENTS } from './data/achievements'
@@ -36,6 +36,8 @@ export function AppLayout() {
   const reset = useGameStore((s) => s.resetProgress)
   const setLevelUpToast = useGameStore((s) => s.setLevelUpToast)
 
+  const dismissLevelUpToast = useCallback(() => setLevelUpToast(null), [setLevelUpToast])
+
   const prog = xpProgress(header.xp)
 
   return (
@@ -53,7 +55,7 @@ export function AppLayout() {
       achievementCount={header.achievementUnlocks.length}
       achievementTotal={ACHIEVEMENTS.length}
       levelUpToast={header.levelUpToast}
-      onDismissToast={() => setLevelUpToast(null)}
+      onDismissToast={dismissLevelUpToast}
       onReset={reset}
     >
       <Outlet />

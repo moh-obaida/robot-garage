@@ -13,8 +13,11 @@ export function isRobotUnlocked(robotId: string, s: RobotUnlockSlice): boolean {
   if (u.kind === 'starter') return true
   if (u.kind === 'chapter') return Boolean(s.storyChapters[u.chapterId]?.completedOnce)
   if (u.kind === 'level') return levelFromTotalXp(s.xp) >= u.minLevel
-  return (
-    Boolean(s.storyChapters[u.chapterId]?.completedOnce) &&
-    levelFromTotalXp(s.xp) >= u.minLevel
-  )
+  if (u.kind === 'chapter_level') {
+    return (
+      Boolean(s.storyChapters[u.chapterId]?.completedOnce) &&
+      levelFromTotalXp(s.xp) >= u.minLevel
+    )
+  }
+  return false
 }
