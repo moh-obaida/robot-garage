@@ -1,29 +1,54 @@
 import { useCallback, useMemo, useState } from 'react'
+import type { JunkyardDifficulty } from '../types/quests'
 import type { MiniGameResult } from '../types/quests'
 
 type Cell = 'part' | 'junk' | 'spark' | 'empty'
 
-const SIZE = 5
+const PRESETS: Record<
+  JunkyardDifficulty,
+  { junk: number; sparks: number; parts: number }
+> = {
+  easy: { junk: 5, sparks: 1, parts: 3 },
+  standard: { junk: 6, sparks: 1, parts: 3 },
+  challenge: { junk: 8, sparks: 2, parts: 3 },
+}
 
-function buildGrid(): Cell[] {
-  const cells: Cell[] = Array(SIZE * SIZE).fill('empty')
+const CLICKS: Record<JunkyardDifficulty, number> = {
+  easy: 13,
+  standard: 11,
+  challenge: 7,
+}
+
+function buildGrid(size: number, diff: JunkyardDifficulty): Cell[] {
+  const { junk, sparks, parts } = PRESETS[diff]
+  const cells: Cell[] = Array(size * size).fill('empty')
   const idx = () => Math.floor(Math.random() * cells.length)
   const place = (t: Cell) => {
     let i = idx()
     let guard = 0
-    while (cells[i] !== 'empty' && guard++ < 80) i = idx()
+    while (cells[i] !== 'empty' && guard++ < 120) i = idx()
     if (cells[i] === 'empty') cells[i] = t
   }
-  for (let p = 0; p < 3; p++) place('part')
-  for (let j = 0; j < 6; j++) place('junk')
-  place('spark')
+  for (let p = 0; p < parts; p++) place('part')
+  for (let j = 0; j < junk; j++) place('junk')
+  for (let s = 0; s < sparks; s++) place('spark')
   return cells
 }
 
-export function JunkyardSearchGame({ onFinish }: { onFinish: (r: MiniGameResult) => void }) {
-  const grid = useMemo(() => buildGrid(), [])
+export function JunkyardSearchGame({
+  difficulty,
+  onFinish,
+}: {
+  difficulty: JunkyardDifficulty
+  onFinish: (r: MiniGameResult) => void
+}) {
+  const size = difficulty === 'easy' ? 4 : 5
+  const maxClicks = CLICKS[difficulty]
+  const partsNeeded = PRESETS[difficulty].parts
+
+  const grid = useMemo(() => buildGrid(size, difficulty), [size, difficulty])
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set())
-  const [clicksLeft, setClicksLeft] = useState(11)
+  const [clicksLeft, setClicksLeft] = useState(maxClicks)
   const [parts, setParts] = useState(0)
 
   const end = useCallback(
@@ -49,20 +74,27 @@ export function JunkyardSearchGame({ onFinish }: { onFinish: (r: MiniGameResult)
     if (c === 'part') {
       const np = parts + 1
       setParts(np)
-      if (np >= 3) {
-        end(true, 300 - (11 - nextClicks) * 10)
+      if (np >= partsNeeded) {
+        end(true, 300 - (maxClicks - nextClicks) * 10)
         return
       }
     }
-    if (nextClicks <= 0 && parts < 3) end(false, parts * 40)
+    if (nextClicks <= 0 && parts < partsNeeded) end(false, parts * 40)
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-center text-sm text-amber-200">Digs left: {clicksLeft} · Parts: {parts}/3</p>
+      <p className="text-center text-sm text-amber-200">
+        {difficulty === 'easy'
+          ? 'Easy'
+          : difficulty === 'challenge'
+            ? 'Challenge'
+            : 'Standard'}
+        : {size}×{size} · Digs left: {clicksLeft} · Parts: {parts}/{partsNeeded}
+      </p>
       <div
         className="mx-auto grid max-w-[280px] gap-1"
-        style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
+        style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
       >
         {grid.map((cell, i) => {
           const show = revealed.has(i)
