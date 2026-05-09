@@ -13,14 +13,14 @@ export function Panel({
 }) {
   return (
     <section
-      className={`relative overflow-hidden rounded-2xl border border-cyan-500/25 bg-slate-900/55 shadow-[0_0_40px_rgba(34,211,238,0.08)] backdrop-blur-md ${className}`}
+      className={`game-panel ${className}`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10" />
-      <header className="relative border-b border-cyan-500/20 px-5 py-4">
-        <h2 className="font-[family-name:var(--font-display)] text-lg font-bold tracking-wide text-cyan-100">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
+      <header className="game-panel-header relative">
+        <h2 className="text-sm font-bold tracking-[0.15em] uppercase text-cyan-300">
           {title}
         </h2>
-        {subtitle ? <p className="mt-1 text-sm text-slate-400">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">{subtitle}</p> : null}
       </header>
       <div className="relative p-5">{children}</div>
     </section>
