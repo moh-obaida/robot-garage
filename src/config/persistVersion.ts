@@ -1,2 +1,2 @@
-/** Must match Zustand `persist({ version })` in `useGameStore`; bump with a migration when the slice changes. */
-export const PERSIST_STORE_VERSION = 5 as const
+/** zustand persist `version` — bump when persisted slice shape changes. */
+export const PERSIST_STORE_VERSION = 3

@@ -70,7 +70,7 @@ body {
   z-index: 50;
 }
 
-/* Phase 10 — comfort */
+/* Comfort — classes toggled on <html> in App.tsx */
 html.rg-reduced-motion .robot-float,
 html.rg-reduced-motion .robot-glow-anim {
   animation: none !important;
@@ -78,6 +78,15 @@ html.rg-reduced-motion .robot-glow-anim {
 
 html.rg-reduced-motion .scanlines::after {
   opacity: 0.12;
+}
+
+html.rg-reduced-motion *,
+html.rg-reduced-motion *::before,
+html.rg-reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 html.rg-high-contrast {
@@ -88,15 +97,6 @@ html.rg-high-contrast .border-slate-700\/80,
 html.rg-high-contrast .border-slate-800\/80,
 html.rg-high-contrast .border-slate-800\/90 {
   border-color: var(--hc-border) !important;
-}
-
-html.rg-reduce-motion *,
-html.rg-reduce-motion *::before,
-html.rg-reduce-motion *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
 }
 
 html.rg-high-contrast body {

@@ -4,6 +4,9 @@ import { RouterProvider } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 import { router } from './routes.tsx'
+import { migrateV1ToV2Save } from './utils/migrateSaves'
+
+migrateV1ToV2Save()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
