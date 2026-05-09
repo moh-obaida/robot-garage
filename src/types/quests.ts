@@ -9,6 +9,8 @@ export type MiniGameKind =
 
 export type QuestType = 'story' | 'minigame'
 
+export type JunkyardDifficulty = 'easy' | 'standard' | 'challenge'
+
 export interface QuestDef {
   id: string
   name: string
@@ -25,6 +27,8 @@ export interface QuestDef {
   miniGame?: MiniGameKind
   /** For score-based minigames: minimum score to count as mission success */
   passScore?: number
+  /** Junkyard layout preset when this quest uses junkyardSearch */
+  junkyardDifficulty?: JunkyardDifficulty
 }
 
 export interface MiniGameResult {

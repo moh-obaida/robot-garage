@@ -434,7 +434,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 5,
+      version: PERSIST_STORE_VERSION,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,

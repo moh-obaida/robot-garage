@@ -40,6 +40,7 @@ export const QUESTS: QuestDef[] = [
     type: 'minigame',
     miniGame: 'junkyardSearch',
     passScore: 1,
+    junkyardDifficulty: 'standard',
   },
   {
     id: 'power-test',
