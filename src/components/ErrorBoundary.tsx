@@ -1,63 +1,52 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { STORAGE_V1, STORAGE_V2 } from '../utils/saveMigration'
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
-const SAVE_KEYS = [STORAGE_V1, STORAGE_V2]
-
-function clearAllRobotGarageSaves() {
-  for (const k of SAVE_KEYS) {
-    try {
-      localStorage.removeItem(k)
-    } catch {
-      /* ignore */
-    }
-  }
+interface Props {
+  children: ReactNode;
 }
 
-export class ErrorBoundary extends Component<{ children: ReactNode }, { err: Error | null }> {
-  state = { err: null as Error | null }
+interface State {
+  err: Error | null;
+}
 
-  static getDerivedStateFromError(error: Error) {
-    return { err: error }
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { err: null };
+
+  static getDerivedStateFromError(err: Error): State {
+    return { err };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Robot Garage error boundary:', error, info)
+  componentDidCatch(err: Error, info: ErrorInfo): void {
+    console.error(err, info.componentStack);
   }
 
-  render() {
+  render(): ReactNode {
     if (this.state.err) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#060a14] p-6 text-slate-100">
-          <div className="max-w-lg rounded-2xl border-2 border-cyan-500/40 bg-slate-950/90 p-8 shadow-[0_0_60px_rgba(34,211,238,0.2)]">
-            <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-wide text-white">
-              Something broke in the garage.
-            </h1>
-            <p className="mt-4 text-slate-300">
-              The game hit an unexpected error. Reload the game or reset your local save.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="rounded-xl bg-amber-400 px-5 py-3 font-bold text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.4)] transition hover:bg-amber-300"
-              >
-                Reload Game
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  clearAllRobotGarageSaves()
-                  window.location.reload()
-                }}
-                className="rounded-xl border border-cyan-500/50 bg-slate-900 px-5 py-3 font-semibold text-cyan-100 transition hover:bg-slate-800"
-              >
-                Reset Local Save
-              </button>
-            </div>
-          </div>
+        <div className="rg-error-fallback rg-panel">
+          <h2>Something shorted in the bay</h2>
+          <p>
+            The garage tools hit an unexpected fault. Refresh the page to
+            reboot the console — your save in this browser should still be
+            there.
+          </p>
+          <p style={{ color: 'var(--rg-muted)', fontSize: '0.9rem' }}>
+            Need a clean slate? Use <strong>Reset progress</strong> from the
+            header after reload — that wipes this site&apos;s saved garage data
+            on purpose.
+          </p>
+          <p style={{ color: 'var(--rg-muted)', fontSize: '0.9rem' }}>
+            {this.state.err.message}
+          </p>
+          <button
+            type="button"
+            className="rg-btn rg-btn-primary"
+            onClick={() => window.location.reload()}
+          >
+            Reload
+          </button>
         </div>
-      )
+      );
     }
-    return this.props.children
+    return this.props.children;
   }
 }
