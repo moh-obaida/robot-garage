@@ -14,7 +14,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
   const [phase, setPhase] = useState<Phase>('intro')
   const [round, setRound] = useState(0)
   const [cue, setCue] = useState<Cue>('left')
-  const [deadline, setDeadline] = useState<number | null>(null)
+  const [raceEpoch, setRaceEpoch] = useState(0)
   const finishedRef = useRef(false)
   const roundRef = useRef(0)
 
@@ -32,8 +32,8 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     roundRef.current = 0
     setRound(0)
     setCue(randomCue())
-    setDeadline(Date.now() + scrapRacerConfig.cueMs)
     setPhase('race')
+    setRaceEpoch((e) => e + 1)
   }, [])
 
   useEffect(() => {
@@ -41,13 +41,13 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
   }, [round])
 
   useEffect(() => {
-    if (phase !== 'race' || deadline === null) return
+    if (phase !== 'race') return
     const id = window.setTimeout(() => {
       setPhase('lost')
       safeFinish({ success: false, score: roundRef.current })
-    }, Math.max(0, deadline - Date.now()))
+    }, scrapRacerConfig.cueMs)
     return () => window.clearTimeout(id)
-  }, [phase, deadline, safeFinish])
+  }, [phase, raceEpoch, safeFinish])
 
   const onCue = (picked: Cue) => {
     if (phase !== 'race') return
@@ -64,7 +64,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     }
     setRound(nextRound)
     setCue(randomCue())
-    setDeadline(Date.now() + scrapRacerConfig.cueMs)
+    setRaceEpoch((e) => e + 1)
   }
 
   const label = cue === 'left' ? '←' : cue === 'right' ? '→' : '↑'

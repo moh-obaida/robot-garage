@@ -9,15 +9,11 @@ type Phase = 'pick' | 'ride' | 'won'
 export function HoverBoardGame({ onFinish }: { onFinish: (r: MiniGameResult) => void }) {
   const [phase, setPhase] = useState<Phase>('pick')
   const [tier, setTier] = useState<Tier>('standard')
-  const [renderTick, setRenderTick] = useState(0)
+  const [ride, setRide] = useState({ pos: 0, stable: 0 })
 
-  const rideRef = useRef({ pos: 0, stable: 0 })
   const tierRef = useRef<Tier>('standard')
-  const bandRef = useRef<number>(hoverBoardConfig.band.standard)
   const phaseRef = useRef<Phase>('pick')
   const finishedRef = useRef(false)
-
-  const bump = useCallback(() => setRenderTick((t) => t + 1), [])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -32,55 +28,57 @@ export function HoverBoardGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     [onFinish],
   )
 
-  const startRide = useCallback(
-    (t: Tier) => {
-      finishedRef.current = false
-      tierRef.current = t
-      bandRef.current = hoverBoardConfig.band[t]
-      rideRef.current = { pos: 0, stable: 0 }
-      setTier(t)
-      setPhase('ride')
-      bump()
-    },
-    [bump],
-  )
+  const startRide = useCallback((t: Tier) => {
+    finishedRef.current = false
+    tierRef.current = t
+    setTier(t)
+    setRide({ pos: 0, stable: 0 })
+    setPhase('ride')
+  }, [])
 
   useSafeInterval(
     () => {
-      if (phaseRef.current !== 'ride') return
+      if (phaseRef.current !== 'ride' || finishedRef.current) return
       const cfg = hoverBoardConfig
-      const r = rideRef.current
-      const drift = (Math.random() - 0.5) * 2 * cfg.driftStrength
-      r.pos = Math.max(-1, Math.min(1, r.pos + drift))
-      if (Math.abs(r.pos) <= bandRef.current) {
-        r.stable += 1
-        if (r.stable >= cfg.stableTicksToWin) {
-          phaseRef.current = 'won'
-          setPhase('won')
-          const bonus =
-            tierRef.current === 'challenge' ? 40 : tierRef.current === 'standard' ? 20 : 10
-          safeFinish({ success: true, score: 100 + bonus + r.stable * 3 })
+      const band = hoverBoardConfig.band[tierRef.current]
+      setRide((prev) => {
+        const drift = (Math.random() - 0.5) * 2 * cfg.driftStrength
+        const pos = Math.max(-1, Math.min(1, prev.pos + drift))
+        let stable = prev.stable
+        if (Math.abs(pos) <= band) {
+          stable += 1
+          if (stable >= cfg.stableTicksToWin && !finishedRef.current) {
+            finishedRef.current = true
+            const stableScore = stable
+            queueMicrotask(() => {
+              setPhase('won')
+              const tr = tierRef.current
+              const bonus = tr === 'challenge' ? 40 : tr === 'standard' ? 20 : 10
+              safeFinish({ success: true, score: 100 + bonus + stableScore * 3 })
+            })
+          }
+        } else {
+          stable = 0
         }
-      } else {
-        r.stable = 0
-      }
-      bump()
+        return { pos, stable }
+      })
     },
     phase === 'ride' ? hoverBoardConfig.tickMs : null,
   )
 
   const nudge = (dir: -1 | 1) => {
     if (phaseRef.current !== 'ride') return
-    const r = rideRef.current
-    r.pos = Math.max(-1, Math.min(1, r.pos + dir * hoverBoardConfig.nudge))
-    bump()
+    setRide((r) => ({
+      ...r,
+      pos: Math.max(-1, Math.min(1, r.pos + dir * hoverBoardConfig.nudge)),
+    }))
   }
 
-  const { pos, stable } = rideRef.current
+  const { pos, stable } = ride
   const band = hoverBoardConfig.band[tier]
 
   return (
-    <div className="space-y-3" data-sync={renderTick}>
+    <div className="space-y-3">
       <p className="text-sm text-slate-400">
         {phase === 'pick' && 'Pick deck tuning — wide band is easier; challenge scores higher.'}
         {phase === 'ride' && (
