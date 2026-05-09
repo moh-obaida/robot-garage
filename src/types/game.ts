@@ -7,6 +7,8 @@ export const ROUTES = {
   colors: '/colors',
   arena: '/arena',
   shop: '/shop',
+  vehicles: '/vehicles',
+  arcade: '/arcade',
 } as const
 
 export type UpgradeId = 'head' | 'arms' | 'body' | 'legs' | 'weapon' | 'core'

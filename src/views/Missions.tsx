@@ -13,7 +13,6 @@ export function Missions() {
   const robotName = useGameStore((s) => s.robotName)
   const paintColorId = useGameStore((s) => s.paintColorId)
   const upgradeLevels = useGameStore((s) => s.upgradeLevels)
-  const xp = useGameStore((s) => s.xp)
   const completeQuestWithResult = useGameStore((s) => s.completeQuestWithResult)
 
   const [active, setActive] = useState<QuestDef | null>(null)
@@ -33,7 +32,6 @@ export function Missions() {
   }
 
   const snap = useGameStore.getState()
-  void xp
 
   return (
     <Panel title="Operations board" subtitle="Side quests & mini-missions. Play for rewards once.">

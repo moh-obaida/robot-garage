@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { evaluateNewAchievementIds } from '../data/achievements'
 import { COLORS } from '../data/colors'
 import { OPPONENTS } from '../data/opponents'
 import { computeCombatStats, nextUpgradeCost } from '../data/upgrades'
@@ -34,6 +35,11 @@ interface GameState extends MigratedSnapshot {
   resetProgress: () => void
   selectRobot: (robotId: string) => void
   syncColorUnlocks: () => void
+}
+
+function mergeAchievementUnlocks(s: MigratedSnapshot): string[] {
+  const add = evaluateNewAchievementIds(s)
+  return [...new Set([...(s.achievementUnlocks ?? []), ...add])]
 }
 
 export function collectColorUnlocks(s: MigratedSnapshot): string[] {
@@ -117,9 +123,13 @@ export const useGameStore = create<GameState>()(
         const cost = nextUpgradeCost(id, lv)
         if (cost == null) return { ok: false, message: 'MAX LEVEL' }
         if (state.scrap < cost) return { ok: false, message: 'Not enough scrap.' }
+        const scrap = state.scrap - cost
+        const upgradeLevels = { ...state.upgradeLevels, [id]: lv + 1 }
+        const next: MigratedSnapshot = { ...state, scrap, upgradeLevels }
         set({
-          scrap: state.scrap - cost,
-          upgradeLevels: { ...state.upgradeLevels, [id]: lv + 1 },
+          scrap,
+          upgradeLevels,
+          achievementUnlocks: mergeAchievementUnlocks(next),
         })
         return { ok: true }
       },
@@ -135,6 +145,12 @@ export const useGameStore = create<GameState>()(
         const q = getQuestById(questId)
         if (!q) return { ok: false, message: 'Unknown quest.' }
 
+        let effectiveSuccess = result.success
+        if (effectiveSuccess && q.passScore != null) {
+          const sc = result.score ?? 0
+          if (sc < q.passScore) effectiveSuccess = false
+        }
+
         const prev = state.questProgress[questId]
         const attempts = (prev?.attempts ?? 0) + 1
         let bestScore = prev?.bestScore
@@ -144,7 +160,7 @@ export const useGameStore = create<GameState>()(
 
         const alreadyDone = state.completedMissions.includes(questId)
 
-        if (!result.success) {
+        if (!effectiveSuccess) {
           set({
             questProgress: {
               ...state.questProgress,
@@ -170,6 +186,7 @@ export const useGameStore = create<GameState>()(
                 completedAt: prev?.completedAt,
               },
             },
+            achievementUnlocks: mergeAchievementUnlocks(state),
           })
           return { ok: true }
         }
@@ -197,6 +214,9 @@ export const useGameStore = create<GameState>()(
         const badges = new Set(state.unlockedBadges)
         if (q.unlockBadgeId) badges.add(q.unlockBadgeId)
 
+        const colorExtras = new Set(state.unlockedColors)
+        if (q.unlockColorId) colorExtras.add(q.unlockColorId)
+
         const partial: MigratedSnapshot = {
           ...state,
           scrap,
@@ -204,6 +224,7 @@ export const useGameStore = create<GameState>()(
           level: nextLv,
           completedMissions: completed,
           unlockedBadges: Array.from(badges),
+          unlockedColors: Array.from(colorExtras),
           questProgress: {
             ...state.questProgress,
             [questId]: {
@@ -215,14 +236,21 @@ export const useGameStore = create<GameState>()(
           },
         }
 
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+
         set({
           scrap,
           xp,
           level: nextLv,
           completedMissions: completed,
           unlockedBadges: Array.from(badges),
-          unlockedColors: collectColorUnlocks(partial),
+          unlockedColors,
           questProgress: partial.questProgress,
+          achievementUnlocks,
           levelUpToast: nextLv > prevLv ? `Level up! Now level ${nextLv}.` : null,
         })
         return { ok: true }
@@ -257,9 +285,12 @@ export const useGameStore = create<GameState>()(
         const scrap = state.scrap - c.scrapCost
         const unlockedColors = [...state.unlockedColors, colorId]
         const partial: MigratedSnapshot = { ...state, scrap, unlockedColors }
+        const unlockedColorsNext = collectColorUnlocks(partial)
+        const nextSnap: MigratedSnapshot = { ...partial, unlockedColors: unlockedColorsNext }
         set({
           scrap,
-          unlockedColors: collectColorUnlocks(partial),
+          unlockedColors: unlockedColorsNext,
+          achievementUnlocks: mergeAchievementUnlocks(nextSnap),
         })
         return { ok: true }
       },
@@ -301,6 +332,12 @@ export const useGameStore = create<GameState>()(
             unlockedBadges: Array.from(badges),
           }
 
+          const unlockedColors = collectColorUnlocks(partial)
+          const achievementUnlocks = mergeAchievementUnlocks({
+            ...partial,
+            unlockedColors,
+          })
+
           return {
             scrap,
             xp,
@@ -310,7 +347,8 @@ export const useGameStore = create<GameState>()(
             arenaLosses: losses,
             defeatedOpponents: Array.from(defeated),
             unlockedBadges: Array.from(badges),
-            unlockedColors: collectColorUnlocks(partial),
+            unlockedColors,
+            achievementUnlocks,
             levelUpToast,
           }
         })
@@ -329,7 +367,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 3,
+      version: 4,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,
@@ -346,6 +384,7 @@ export const useGameStore = create<GameState>()(
         arenaLosses: s.arenaLosses,
         defeatedOpponents: s.defeatedOpponents,
         unlockedBadges: s.unlockedBadges,
+        achievementUnlocks: s.achievementUnlocks,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<MigratedSnapshot>
@@ -362,9 +401,17 @@ export const useGameStore = create<GameState>()(
             ...((current as MigratedSnapshot).questProgress ?? {}),
             ...(p.questProgress ?? {}),
           },
+          achievementUnlocks: [
+            ...new Set([
+              ...(DEFAULT_SNAPSHOT.achievementUnlocks ?? []),
+              ...((current as MigratedSnapshot).achievementUnlocks ?? []),
+              ...(p.achievementUnlocks ?? []),
+            ]),
+          ],
         }
         merged.level = levelFromTotalXp(merged.xp)
         merged.unlockedColors = collectColorUnlocks(merged)
+        merged.achievementUnlocks = mergeAchievementUnlocks(merged)
         return { ...current, ...merged, levelUpToast: null }
       },
     },

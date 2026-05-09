@@ -5,59 +5,17 @@ import { getColorById } from '../data/colors'
 import { Panel } from '../components/Panel'
 import { buildPlayerCombatants, useGameStore } from '../store/useGameStore'
 import type { ArenaOpponent } from '../types/game'
+import {
+  type BattleAction,
+  type Combatant,
+  clamp,
+  initiative,
+  makeCombatant,
+  rollDamage,
+  simulateEnemyTurn,
+} from '../utils/battleEngine'
 
 type Phase = 'pick' | 'fight' | 'end'
-
-type BattleAction = 'strike' | 'fortify' | 'overcharge' | 'repair'
-
-interface Combatant {
-  name: string
-  maxHp: number
-  hp: number
-  attack: number
-  defense: number
-  speed: number
-  guardPct: number
-  strikeMult: number
-  repairsLeft: number
-}
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n))
-}
-
-function rollDamage(attack: number, defense: number, mult: number, guardPct: number): number {
-  const variance = 0.88 + Math.random() * 0.24
-  let raw = attack * mult * variance - defense * 0.55
-  if (guardPct > 0) raw *= 1 - guardPct
-  return Math.max(1, Math.floor(raw))
-}
-
-function initiative(playerSpd: number, enemySpd: number): 'player' | 'enemy' {
-  if (playerSpd > enemySpd) return 'player'
-  if (enemySpd > playerSpd) return 'enemy'
-  return Math.random() < 0.5 ? 'player' : 'enemy'
-}
-
-function makeCombatant(
-  name: string,
-  maxHp: number,
-  atk: number,
-  def: number,
-  spd: number,
-): Combatant {
-  return {
-    name,
-    maxHp,
-    hp: maxHp,
-    attack: atk,
-    defense: def,
-    speed: spd,
-    guardPct: 0,
-    strikeMult: 1,
-    repairsLeft: 2,
-  }
-}
 
 export function Arena() {
   const snapshot = useGameStore(
@@ -69,6 +27,7 @@ export function Arena() {
     })),
   )
   const applyArenaRewards = useGameStore((s) => s.applyArenaRewards)
+  const playerLevel = useGameStore((s) => s.level)
 
   const [phase, setPhase] = useState<Phase>('pick')
   const [opponent, setOpponent] = useState<ArenaOpponent | null>(null)
@@ -119,40 +78,17 @@ export function Arena() {
 
   const applyEnemyTurn = useCallback(
     (pState: Combatant, eState: Combatant) => {
-      const e = { ...eState }
-      const p = { ...pState }
-      const logLines: string[] = []
-
-      const pct = e.hp / e.maxHp
-      if (pct < 0.35 && e.repairsLeft > 0 && Math.random() < 0.62) {
-        const heal = Math.floor(e.maxHp * 0.22)
-        e.hp = clamp(e.hp + heal, 0, e.maxHp)
-        e.repairsLeft -= 1
-        logLines.push(`${e.name} executes field repair (+${heal}).`)
-      } else if (Math.random() < 0.72) {
-        const mult = e.strikeMult
-        const dmg = rollDamage(e.attack, p.defense, mult, p.guardPct)
-        p.hp = clamp(p.hp - dmg, 0, p.maxHp)
-        p.guardPct = 0
-        e.strikeMult = 1
-        logLines.push(`${e.name} strikes for ${dmg}.`)
-      } else {
-        e.guardPct = 0.35
-        logLines.push(`${e.name} braces — next hit mitigated.`)
-      }
-
-      if (p.hp <= 0) {
-        setPlayer(p)
-        setEnemy(e)
-        logLines.forEach((l) => pushLog(l))
+      const out = simulateEnemyTurn(pState, eState)
+      if (out.playerDefeated) {
+        setPlayer(out.player)
+        setEnemy(out.enemy)
+        out.logLines.forEach((l) => pushLog(l))
         endBattle(false)
         return
       }
-
-      setPlayer(p)
-      setEnemy(e)
-      logLines.push(`Your turn.`)
-      logLines.forEach((l) => pushLog(l))
+      setPlayer(out.player)
+      setEnemy(out.enemy)
+      out.logLines.forEach((l) => pushLog(l))
       setTurn('player')
     },
     [endBattle, pushLog],
@@ -210,27 +146,38 @@ export function Arena() {
       <Panel title="PvP circuit" subtitle="Turn-based. Out-think the rival pilots." className="lg:col-span-2">
         {phase === 'pick' ? (
           <ul className="grid gap-3 sm:grid-cols-2">
-            {OPPONENTS.map((o) => (
-              <li
-                key={o.id}
-                className="rounded-xl border border-slate-700/80 bg-slate-950/50 p-4"
-              >
-                <h3 className="font-[family-name:var(--font-display)] font-bold text-slate-100">
-                  {o.callsign}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  HP {o.hp} · ATK {o.power} · DEF {o.armor} · SPD {o.speed}
-                </p>
-                <p className="mt-2 text-sm text-amber-200/90">Win: +{o.rewardScrap} scrap</p>
-                <button
-                  type="button"
-                  onClick={() => startMatch(o)}
-                  className="mt-3 w-full rounded-lg bg-emerald-500 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-400"
+            {OPPONENTS.map((o) => {
+              const locked = playerLevel < o.requiredLevel
+              return (
+                <li
+                  key={o.id}
+                  className={`rounded-xl border border-slate-700/80 p-4 ${
+                    locked ? 'bg-slate-950/30 opacity-70' : 'bg-slate-950/50'
+                  }`}
                 >
-                  Enter arena
-                </button>
-              </li>
-            ))}
+                  <h3 className="font-[family-name:var(--font-display)] font-bold text-slate-100">
+                    {o.callsign}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    HP {o.hp} · ATK {o.power} · DEF {o.armor} · SPD {o.speed}
+                  </p>
+                  <p className="mt-1 text-[10px] text-slate-500">Needs pilot Lv {o.requiredLevel}</p>
+                  <p className="mt-2 text-sm text-amber-200/90">Win: +{o.rewardScrap} scrap</p>
+                  <button
+                    type="button"
+                    disabled={locked}
+                    onClick={() => startMatch(o)}
+                    className={`mt-3 w-full rounded-lg py-2 text-sm font-bold ${
+                      locked
+                        ? 'cursor-not-allowed bg-slate-800 text-slate-500'
+                        : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                    }`}
+                  >
+                    {locked ? 'Locked' : 'Enter arena'}
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         ) : null}
 

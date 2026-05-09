@@ -137,6 +137,7 @@ export interface MigratedSnapshot {
   arenaLosses: number
   defeatedOpponents: string[]
   unlockedBadges: string[]
+  achievementUnlocks: string[]
 }
 
 export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
@@ -155,6 +156,7 @@ export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
   arenaLosses: 0,
   defeatedOpponents: [],
   unlockedBadges: [],
+  achievementUnlocks: [],
 }
 
 export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
@@ -199,6 +201,7 @@ export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
   base.questProgress = syncQuestProgressFromMissions(base.completedMissions, base.questProgress)
   base.defeatedOpponents = safeStringArray(state.defeatedOpponents)
   base.unlockedBadges = safeStringArray(state.unlockedBadges)
+  base.achievementUnlocks = safeStringArray(state.achievementUnlocks)
 
   if (!base.unlockedColors.includes(base.paintColorId)) {
     base.paintColorId = base.unlockedColors[0] ?? 'blue'

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MiniGameResult } from '../types/quests'
+import {
+  type BattleAction,
+  type Combatant,
+  clamp,
+  initiative,
+  makeCombatant,
+  rollDamage,
+  simulateEnemyTurn,
+} from '../utils/battleEngine'
 
 export interface TrainingCombatProfile {
   name: string
@@ -7,57 +16,6 @@ export interface TrainingCombatProfile {
   attack: number
   defense: number
   speed: number
-}
-
-type BattleAction = 'strike' | 'fortify' | 'overcharge' | 'repair'
-
-interface Combatant {
-  name: string
-  maxHp: number
-  hp: number
-  attack: number
-  defense: number
-  speed: number
-  guardPct: number
-  strikeMult: number
-  repairsLeft: number
-}
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n))
-}
-
-function rollDamage(attack: number, defense: number, mult: number, guardPct: number): number {
-  const variance = 0.88 + Math.random() * 0.24
-  let raw = attack * mult * variance - defense * 0.55
-  if (guardPct > 0) raw *= 1 - guardPct
-  return Math.max(1, Math.floor(raw))
-}
-
-function initiative(playerSpd: number, enemySpd: number): 'player' | 'enemy' {
-  if (playerSpd > enemySpd) return 'player'
-  if (enemySpd > playerSpd) return 'enemy'
-  return Math.random() < 0.5 ? 'player' : 'enemy'
-}
-
-function makeCombatant(
-  name: string,
-  maxHp: number,
-  atk: number,
-  def: number,
-  spd: number,
-): Combatant {
-  return {
-    name,
-    maxHp,
-    hp: maxHp,
-    attack: atk,
-    defense: def,
-    speed: spd,
-    guardPct: 0,
-    strikeMult: 1,
-    repairsLeft: 2,
-  }
 }
 
 export function TrainingBattleGame({
@@ -122,36 +80,16 @@ export function TrainingBattleGame({
   const applyEnemyTurn = useCallback(
     (pState: Combatant, eState: Combatant) => {
       if (ended.current) return
-      const e = { ...eState }
-      const p = { ...pState }
-
-      const pct = e.hp / e.maxHp
-      if (pct < 0.4 && e.repairsLeft > 0 && Math.random() < 0.5) {
-        const heal = Math.floor(e.maxHp * 0.2)
-        e.hp = clamp(e.hp + heal, 0, e.maxHp)
-        e.repairsLeft -= 1
-        pushLog(`${e.name} repairs (+${heal}).`)
-      } else if (Math.random() < 0.7) {
-        const dmg = rollDamage(e.attack, p.defense, e.strikeMult, p.guardPct)
-        p.hp = clamp(p.hp - dmg, 0, p.maxHp)
-        p.guardPct = 0
-        e.strikeMult = 1
-        pushLog(`${e.name} hits for ${dmg}.`)
-      } else {
-        e.guardPct = 0.32
-        pushLog(`${e.name} guards.`)
-      }
-
-      if (p.hp <= 0) {
-        setPlayer(p)
-        setEnemy(e)
+      const out = simulateEnemyTurn(pState, eState)
+      out.logLines.forEach((l) => pushLog(l))
+      if (out.playerDefeated) {
+        setPlayer(out.player)
+        setEnemy(out.enemy)
         endBattle(false, 0)
         return
       }
-
-      setPlayer(p)
-      setEnemy(e)
-      pushLog('Your turn.')
+      setPlayer(out.player)
+      setEnemy(out.enemy)
       setTurn('player')
     },
     [endBattle, pushLog],

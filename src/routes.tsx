@@ -5,7 +5,10 @@ import { Garage } from './views/Garage'
 import { Upgrades } from './views/Upgrades'
 import { Missions } from './views/Missions'
 import { Colors } from './views/Colors'
+import { Arcade } from './views/Arcade'
 import { Arena } from './views/Arena'
+import { Shop } from './views/Shop'
+import { Vehicles } from './views/Vehicles'
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +21,9 @@ export const router = createBrowserRouter([
       { path: 'missions', element: <Missions /> },
       { path: 'colors', element: <Colors /> },
       { path: 'arena', element: <Arena /> },
+      { path: 'shop', element: <Shop /> },
+      { path: 'vehicles', element: <Vehicles /> },
+      { path: 'arcade', element: <Arcade /> },
     ],
   },
 ])

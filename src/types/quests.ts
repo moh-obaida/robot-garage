@@ -5,6 +5,7 @@ export type MiniGameKind =
   | 'speedTest'
   | 'balanceTest'
   | 'trainingBattle'
+  | 'memoryCircuit'
 
 export type QuestType = 'story' | 'minigame'
 

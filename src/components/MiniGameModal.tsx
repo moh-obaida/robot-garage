@@ -5,6 +5,7 @@ import { CoreChargeGame } from '../minigames/CoreChargeGame'
 import { JunkyardSearchGame } from '../minigames/JunkyardSearchGame'
 import { SpeedTestGame } from '../minigames/SpeedTestGame'
 import { TrainingBattleGame, type TrainingCombatProfile } from '../minigames/TrainingBattleGame'
+import { MemoryCircuitGame } from '../minigames/MemoryCircuitGame'
 import { WireRepairGame } from '../minigames/WireRepairGame'
 
 type Step = 'how' | 'play' | 'result'
@@ -53,6 +54,8 @@ export function MiniGameModal({
         return <BalanceTestGame key={k} onFinish={relayFinish} />
       case 'trainingBattle':
         return <TrainingBattleGame key={k} player={trainingProfile} onFinish={relayFinish} />
+      case 'memoryCircuit':
+        return <MemoryCircuitGame key={k} onFinish={relayFinish} />
       default:
         return null
     }
