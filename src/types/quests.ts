@@ -1,7 +1,11 @@
+export type JunkyardDifficulty = 'easy' | 'standard' | 'challenge'
+
 export type MiniGameKind =
   | 'coreCharge'
   | 'wireRepair'
   | 'junkyardSearch'
+  | 'scrapRacer'
+  | 'timeTrial'
   | 'speedTest'
   | 'balanceTest'
   | 'trainingBattle'
@@ -23,6 +27,7 @@ export interface QuestDef {
   unlockBadgeId?: string
   type: QuestType
   miniGame?: MiniGameKind
+  junkyardDifficulty?: JunkyardDifficulty
   /** For score-based minigames: minimum score to count as mission success */
   passScore?: number
 }

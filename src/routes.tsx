@@ -9,6 +9,7 @@ import { Arcade } from './views/Arcade'
 import { Arena } from './views/Arena'
 import { Shop } from './views/Shop'
 import { Vehicles } from './views/Vehicles'
+import { World } from './views/World'
 
 export const router = createBrowserRouter([
   {
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'shop', element: <Shop /> },
       { path: 'vehicles', element: <Vehicles /> },
       { path: 'arcade', element: <Arcade /> },
+      { path: 'world', element: <World /> },
     ],
   },
 ])

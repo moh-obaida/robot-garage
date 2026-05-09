@@ -128,6 +128,9 @@ export const useGameStore = create<GameState>()(
         if (!launchChecklistComplete(slice)) {
           return { ok: false, message: 'Complete every launch task to collect.' }
         }
+        if (!allLaunchStepsComplete(state.launchReadiness)) {
+          return { ok: false, message: 'Finish the pilot sign-off steps first.' }
+        }
         const prevLv = levelFromTotalXp(state.xp)
         const xp = state.xp + LAUNCH_CHECKLIST_BONUS_XP
         const scrap = state.scrap + LAUNCH_CHECKLIST_BONUS_SCRAP
@@ -434,7 +437,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 5,
+      version: PERSIST_STORE_VERSION,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,

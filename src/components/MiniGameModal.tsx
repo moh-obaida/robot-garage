@@ -6,6 +6,8 @@ import { JunkyardSearchGame } from '../minigames/JunkyardSearchGame'
 import { SpeedTestGame } from '../minigames/SpeedTestGame'
 import { TrainingBattleGame, type TrainingCombatProfile } from '../minigames/TrainingBattleGame'
 import { MemoryCircuitGame } from '../minigames/MemoryCircuitGame'
+import { ScrapRacerGame } from '../minigames/ScrapRacerGame'
+import { TimeTrialGame } from '../minigames/TimeTrialGame'
 import { WireRepairGame } from '../minigames/WireRepairGame'
 
 type Step = 'how' | 'play' | 'result'
@@ -47,7 +49,13 @@ export function MiniGameModal({
       case 'wireRepair':
         return <WireRepairGame key={k} onFinish={relayFinish} />
       case 'junkyardSearch':
-        return <JunkyardSearchGame key={k} onFinish={relayFinish} />
+        return (
+          <JunkyardSearchGame
+            key={k}
+            difficulty={quest.junkyardDifficulty ?? 'standard'}
+            onFinish={relayFinish}
+          />
+        )
       case 'speedTest':
         return <SpeedTestGame key={k} onFinish={relayFinish} />
       case 'balanceTest':
@@ -56,6 +64,10 @@ export function MiniGameModal({
         return <TrainingBattleGame key={k} player={trainingProfile} onFinish={relayFinish} />
       case 'memoryCircuit':
         return <MemoryCircuitGame key={k} onFinish={relayFinish} />
+      case 'scrapRacer':
+        return <ScrapRacerGame key={k} onFinish={relayFinish} />
+      case 'timeTrial':
+        return <TimeTrialGame key={k} onFinish={relayFinish} />
       default:
         return null
     }

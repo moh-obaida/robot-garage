@@ -54,6 +54,7 @@ export function Missions() {
               completed={done}
               canReplay={done && q.type === 'minigame'}
               bestScore={prog?.bestScore}
+              attempts={prog?.attempts}
               onOpen={() => {
                 const fresh = useGameStore.getState()
                 const gate = canStartQuest(q, fresh)
