@@ -1,4 +1,12 @@
-export type ViewId = 'dashboard' | 'garage' | 'upgrades' | 'missions' | 'colors' | 'arena'
+/** App paths — each screen is its own route */
+export const ROUTES = {
+  play: '/',
+  garage: '/garage',
+  upgrades: '/upgrades',
+  missions: '/missions',
+  colors: '/colors',
+  arena: '/arena',
+} as const
 
 export type UpgradeId = 'chassis' | 'actuators' | 'plating' | 'gyros'
 

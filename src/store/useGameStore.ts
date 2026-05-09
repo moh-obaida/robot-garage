@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { COLORS } from '../data/colors'
 import { MISSIONS } from '../data/missions'
 import { computeStats, upgradePrice } from '../data/upgrades'
-import type { RobotStats, UpgradeId, ViewId } from '../types/game'
+import type { RobotStats, UpgradeId } from '../types/game'
 
 const STORAGE_KEY = 'robot-garage-save-v1'
 
@@ -16,13 +16,11 @@ export interface GameSnapshot {
   completedMissions: string[]
   arenaWins: number
   arenaLosses: number
-  lastView: ViewId
 }
 
 const starterColors = COLORS.filter((c) => c.starter).map((c) => c.id)
 
 interface GameState extends GameSnapshot {
-  setView: (v: ViewId) => void
   renameRobot: (name: string) => void
   addScrap: (n: number) => void
   tryBuyUpgrade: (id: UpgradeId) => boolean
@@ -42,7 +40,6 @@ const defaultSnapshot: GameSnapshot = {
   completedMissions: [],
   arenaWins: 0,
   arenaLosses: 0,
-  lastView: 'dashboard',
 }
 
 function missionAvailable(completed: string[], missionId: string): boolean {
@@ -55,8 +52,6 @@ export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       ...defaultSnapshot,
-
-      setView: (v) => set({ lastView: v }),
 
       renameRobot: (name) => {
         const trimmed = name.trim().slice(0, 24) || 'Unit-07'

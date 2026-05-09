@@ -1,26 +1,23 @@
 import type { ReactNode } from 'react'
-import type { ViewId } from '../types/game'
+import { NavLink } from 'react-router-dom'
+import { ROUTES } from '../types/game'
 
-const NAV: { id: ViewId; label: string }[] = [
-  { id: 'dashboard', label: 'Command' },
-  { id: 'garage', label: 'Garage' },
-  { id: 'upgrades', label: 'Upgrades' },
-  { id: 'missions', label: 'Missions' },
-  { id: 'colors', label: 'Finishes' },
-  { id: 'arena', label: 'Arena' },
+const NAV: { to: string; label: string }[] = [
+  { to: ROUTES.play, label: 'Play' },
+  { to: ROUTES.garage, label: 'Garage' },
+  { to: ROUTES.missions, label: 'Missions' },
+  { to: ROUTES.arena, label: 'PvP Arena' },
+  { to: ROUTES.upgrades, label: 'Shop' },
+  { to: ROUTES.colors, label: 'Colors' },
 ]
 
 export function GameShell({
-  active,
-  onNav,
   scrap,
   arenaWins,
   arenaLosses,
   children,
   onReset,
 }: {
-  active: ViewId
-  onNav: (v: ViewId) => void
   scrap: number
   arenaWins: number
   arenaLosses: number
@@ -64,23 +61,22 @@ export function GameShell({
         </header>
 
         <nav className="mb-8 flex flex-wrap gap-2">
-          {NAV.map((item) => {
-            const isOn = item.id === active
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onNav(item.id)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isOn
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === ROUTES.play}
+              className={({ isActive }) =>
+                `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.45)]'
                     : 'border border-slate-600/60 bg-slate-900/50 text-slate-300 hover:border-cyan-500/40 hover:text-cyan-100'
-                }`}
-              >
-                {item.label}
-              </button>
-            )
-          })}
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <main>{children}</main>

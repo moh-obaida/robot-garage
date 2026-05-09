@@ -1,10 +1,11 @@
+import { Link } from 'react-router-dom'
 import { MISSIONS } from '../data/missions'
 import { Panel } from '../components/Panel'
 import { RobotFigure } from '../components/RobotFigure'
 import { selectRobotStats, useGameStore } from '../store/useGameStore'
-import type { ViewId } from '../types/game'
+import { ROUTES } from '../types/game'
 
-export function Dashboard({ onGo }: { onGo: (v: ViewId) => void }) {
+export function Dashboard() {
   const robotName = useGameStore((s) => s.robotName)
   const paintColorId = useGameStore((s) => s.paintColorId)
   const completed = useGameStore((s) => s.completedMissions)
@@ -13,29 +14,29 @@ export function Dashboard({ onGo }: { onGo: (v: ViewId) => void }) {
 
   const missionPct = Math.round((completed.length / MISSIONS.length) * 100)
 
-  const tiles: { title: string; desc: string; view: ViewId; accent: string }[] = [
+  const tiles: { title: string; desc: string; to: string; accent: string }[] = [
     {
       title: 'Garage',
       desc: 'Inspect your unit and bay atmosphere.',
-      view: 'garage',
+      to: ROUTES.garage,
       accent: 'from-cyan-500/20 to-transparent',
     },
     {
-      title: 'Upgrades',
+      title: 'Shop',
       desc: 'Spend scrap on chassis, weapons, and gyros.',
-      view: 'upgrades',
+      to: ROUTES.upgrades,
       accent: 'from-fuchsia-500/20 to-transparent',
     },
     {
       title: 'Missions',
       desc: 'Deploy for payouts and exclusive finishes.',
-      view: 'missions',
+      to: ROUTES.missions,
       accent: 'from-amber-500/20 to-transparent',
     },
     {
       title: 'Arena',
       desc: 'Turn-based duels vs ranked opponents.',
-      view: 'arena',
+      to: ROUTES.arena,
       accent: 'from-emerald-500/20 to-transparent',
     },
   ]
@@ -80,10 +81,9 @@ export function Dashboard({ onGo }: { onGo: (v: ViewId) => void }) {
       <Panel title="Quick deploy" subtitle="Jump to a station.">
         <ul className="space-y-3">
           {tiles.map((t) => (
-            <li key={t.view}>
-              <button
-                type="button"
-                onClick={() => onGo(t.view)}
+            <li key={t.to}>
+              <Link
+                to={t.to}
                 className={`group flex w-full items-start gap-3 rounded-xl border border-slate-700/80 bg-gradient-to-r ${t.accent} p-4 text-left transition hover:border-cyan-500/50`}
               >
                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
@@ -93,9 +93,23 @@ export function Dashboard({ onGo }: { onGo: (v: ViewId) => void }) {
                   </span>
                   <span className="text-sm text-slate-400">{t.desc}</span>
                 </span>
-              </button>
+              </Link>
             </li>
           ))}
+          <li>
+            <Link
+              to={ROUTES.colors}
+              className="group flex w-full items-start gap-3 rounded-xl border border-slate-700/80 bg-gradient-to-r from-violet-500/20 to-transparent p-4 text-left transition hover:border-cyan-500/50"
+            >
+              <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]" />
+              <span>
+                <span className="block font-semibold text-slate-100 group-hover:text-cyan-100">
+                  Colors
+                </span>
+                <span className="text-sm text-slate-400">Unlock and equip paint finishes.</span>
+              </span>
+            </Link>
+          </li>
         </ul>
       </Panel>
     </div>
