@@ -10,10 +10,13 @@ import { canStartQuest, getQuestById } from '../utils/questEngine'
 import { levelFromTotalXp } from '../utils/progression'
 import {
   type ComfortSettings,
+  type LaunchStepId,
   LAUNCH_CHECKLIST_BONUS_SCRAP,
   LAUNCH_CHECKLIST_BONUS_XP,
+  allLaunchStepsComplete,
   launchChecklistComplete,
 } from '../data/launchReadiness'
+import { PERSIST_STORE_VERSION } from '../config/persistVersion'
 import {
   DEFAULT_SNAPSHOT,
   STORAGE_V1,
@@ -43,6 +46,7 @@ interface GameState extends MigratedSnapshot {
   syncColorUnlocks: () => void
   recordVisit: (pathname: string) => void
   setComfort: (patch: Partial<ComfortSettings>) => void
+  completeLaunchStep: (id: LaunchStepId) => void
   claimLaunchChecklistBonus: () => { ok: boolean; message?: string }
 }
 
@@ -114,6 +118,22 @@ export const useGameStore = create<GameState>()(
         }))
       },
 
+      completeLaunchStep: (id) => {
+        set((s) => {
+          if (s.launchReadiness.stepCompletion[id]) return {}
+          const stamp = new Date().toISOString()
+          return {
+            launchReadiness: {
+              ...s.launchReadiness,
+              stepCompletion: {
+                ...s.launchReadiness.stepCompletion,
+                [id]: stamp,
+              },
+            },
+          }
+        })
+      },
+
       claimLaunchChecklistBonus: () => {
         const state = get()
         if (state.launchReadiness.completionBonusClaimed) {
@@ -127,6 +147,9 @@ export const useGameStore = create<GameState>()(
         }
         if (!launchChecklistComplete(slice)) {
           return { ok: false, message: 'Complete every launch task to collect.' }
+        }
+        if (!allLaunchStepsComplete(state.launchReadiness)) {
+          return { ok: false, message: 'Finish pilot sign-off before collecting.' }
         }
         const prevLv = levelFromTotalXp(state.xp)
         const xp = state.xp + LAUNCH_CHECKLIST_BONUS_XP
@@ -434,7 +457,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 5,
+      version: PERSIST_STORE_VERSION,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,
