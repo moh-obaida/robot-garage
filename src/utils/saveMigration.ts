@@ -1,5 +1,14 @@
 import type { UpgradeId } from '../types/game'
+import {
+  DEFAULT_LAUNCH_READINESS,
+  mergeComfort,
+  mergeLaunchReadiness,
+  type ComfortSettings,
+  type LaunchReadinessState,
+} from '../data/launchReadiness'
 import { levelFromTotalXp } from './progression'
+
+export type { ComfortSettings, LaunchReadinessState }
 
 export interface QuestProgressEntry {
   completed: boolean
@@ -138,6 +147,10 @@ export interface MigratedSnapshot {
   defeatedOpponents: string[]
   unlockedBadges: string[]
   achievementUnlocks: string[]
+  /** Routes visited at least once (pathname) */
+  visitedPaths: string[]
+  comfort: ComfortSettings
+  launchReadiness: LaunchReadinessState
 }
 
 export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
@@ -157,6 +170,9 @@ export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
   defeatedOpponents: [],
   unlockedBadges: [],
   achievementUnlocks: [],
+  visitedPaths: [],
+  comfort: { reducedMotion: false, highContrast: false },
+  launchReadiness: { ...DEFAULT_LAUNCH_READINESS },
 }
 
 export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
@@ -202,6 +218,10 @@ export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
   base.defeatedOpponents = safeStringArray(state.defeatedOpponents)
   base.unlockedBadges = safeStringArray(state.unlockedBadges)
   base.achievementUnlocks = safeStringArray(state.achievementUnlocks)
+  base.visitedPaths = safeStringArray(state.visitedPaths)
+
+  base.comfort = mergeComfort(state.comfort)
+  base.launchReadiness = mergeLaunchReadiness(state.launchReadiness)
 
   if (!base.unlockedColors.includes(base.paintColorId)) {
     base.paintColorId = base.unlockedColors[0] ?? 'blue'

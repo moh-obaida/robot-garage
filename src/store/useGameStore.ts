@@ -9,6 +9,12 @@ import type { MiniGameResult } from '../types/quests'
 import { canStartQuest, getQuestById } from '../utils/questEngine'
 import { levelFromTotalXp } from '../utils/progression'
 import {
+  type ComfortSettings,
+  LAUNCH_CHECKLIST_BONUS_SCRAP,
+  LAUNCH_CHECKLIST_BONUS_XP,
+  launchChecklistComplete,
+} from '../data/launchReadiness'
+import {
   DEFAULT_SNAPSHOT,
   STORAGE_V1,
   STORAGE_V2,
@@ -35,6 +41,9 @@ interface GameState extends MigratedSnapshot {
   resetProgress: () => void
   selectRobot: (robotId: string) => void
   syncColorUnlocks: () => void
+  recordVisit: (pathname: string) => void
+  setComfort: (patch: Partial<ComfortSettings>) => void
+  claimLaunchChecklistBonus: () => { ok: boolean; message?: string }
 }
 
 function mergeAchievementUnlocks(s: MigratedSnapshot): string[] {
@@ -89,6 +98,64 @@ export const useGameStore = create<GameState>()(
       ...seed(),
 
       setLevelUpToast: (msg) => set({ levelUpToast: msg }),
+
+      recordVisit: (pathname) => {
+        const raw = pathname?.trim() || '/'
+        const p = raw.startsWith('/') ? raw : `/${raw}`
+        set((s) => {
+          if (s.visitedPaths.includes(p)) return {}
+          return { visitedPaths: [...s.visitedPaths, p] }
+        })
+      },
+
+      setComfort: (patch) => {
+        set((s) => ({
+          comfort: { ...s.comfort, ...patch },
+        }))
+      },
+
+      claimLaunchChecklistBonus: () => {
+        const state = get()
+        if (state.launchReadiness.completionBonusClaimed) {
+          return { ok: false, message: 'Launch bonus already banked.' }
+        }
+        const slice = {
+          completedMissions: state.completedMissions,
+          upgradeLevels: state.upgradeLevels,
+          arenaWins: state.arenaWins,
+          visitedPaths: state.visitedPaths,
+        }
+        if (!launchChecklistComplete(slice)) {
+          return { ok: false, message: 'Complete every launch task to collect.' }
+        }
+        const prevLv = levelFromTotalXp(state.xp)
+        const xp = state.xp + LAUNCH_CHECKLIST_BONUS_XP
+        const scrap = state.scrap + LAUNCH_CHECKLIST_BONUS_SCRAP
+        const nextLv = levelFromTotalXp(xp)
+        const partial: MigratedSnapshot = {
+          ...state,
+          scrap,
+          xp,
+          level: nextLv,
+          launchReadiness: { ...state.launchReadiness, completionBonusClaimed: true },
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          unlockedColors,
+          achievementUnlocks,
+          launchReadiness: { ...state.launchReadiness, completionBonusClaimed: true },
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : state.levelUpToast,
+        })
+        return { ok: true }
+      },
 
       syncColorUnlocks: () => {
         const s = get()
@@ -367,7 +434,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 4,
+      version: 5,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,
@@ -385,9 +452,13 @@ export const useGameStore = create<GameState>()(
         defeatedOpponents: s.defeatedOpponents,
         unlockedBadges: s.unlockedBadges,
         achievementUnlocks: s.achievementUnlocks,
+        visitedPaths: s.visitedPaths,
+        comfort: s.comfort,
+        launchReadiness: s.launchReadiness,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<MigratedSnapshot>
+        const cur = current as MigratedSnapshot
         const merged: MigratedSnapshot = {
           ...DEFAULT_SNAPSHOT,
           ...current,
@@ -398,13 +469,35 @@ export const useGameStore = create<GameState>()(
           },
           questProgress: {
             ...DEFAULT_SNAPSHOT.questProgress,
-            ...((current as MigratedSnapshot).questProgress ?? {}),
+            ...(cur.questProgress ?? {}),
             ...(p.questProgress ?? {}),
+          },
+          visitedPaths: [
+            ...new Set([
+              ...DEFAULT_SNAPSHOT.visitedPaths,
+              ...(cur.visitedPaths ?? []),
+              ...(p.visitedPaths ?? []),
+            ]),
+          ],
+          comfort: {
+            ...DEFAULT_SNAPSHOT.comfort,
+            ...(cur.comfort ?? {}),
+            ...(p.comfort ?? {}),
+          },
+          launchReadiness: {
+            ...DEFAULT_SNAPSHOT.launchReadiness,
+            ...(cur.launchReadiness ?? {}),
+            ...(p.launchReadiness ?? {}),
+            stepCompletion: {
+              ...DEFAULT_SNAPSHOT.launchReadiness.stepCompletion,
+              ...(cur.launchReadiness?.stepCompletion ?? {}),
+              ...(p.launchReadiness?.stepCompletion ?? {}),
+            },
           },
           achievementUnlocks: [
             ...new Set([
               ...(DEFAULT_SNAPSHOT.achievementUnlocks ?? []),
-              ...((current as MigratedSnapshot).achievementUnlocks ?? []),
+              ...(cur.achievementUnlocks ?? []),
               ...(p.achievementUnlocks ?? []),
             ]),
           ],
