@@ -9,14 +9,14 @@ function typeLabel(type: QuestDef['type'], mini?: QuestDef['miniGame']) {
       return 'Wires'
     case 'junkyardSearch':
       return 'Search'
-    case 'memoryCircuit':
-      return 'Memory'
     case 'speedTest':
       return 'Speed'
     case 'balanceTest':
       return 'Balance'
     case 'trainingBattle':
       return 'Battle'
+    case 'memoryCircuit':
+      return 'Memory'
     default:
       return 'Quest'
   }
@@ -28,7 +28,6 @@ export function QuestCard({
   completed,
   canReplay,
   bestScore,
-  attempts,
   onOpen,
 }: {
   quest: QuestDef
@@ -36,7 +35,6 @@ export function QuestCard({
   completed: boolean
   canReplay: boolean
   bestScore?: number
-  attempts?: number
   onOpen: () => void
 }) {
   const tone = completed
@@ -67,20 +65,6 @@ export function QuestCard({
           </p>
           {bestScore != null ? (
             <p className="mt-1 text-xs text-slate-500">Best score: {bestScore}</p>
-          ) : null}
-          {quest.type === 'minigame' && attempts != null && attempts > 0 && !completed ? (
-            <div className="mt-2">
-              <div className="flex items-center justify-between text-[10px] text-slate-500">
-                <span>Runs logged</span>
-                <span>{attempts}</span>
-              </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-cyan-500/50 transition-all"
-                  style={{ width: `${Math.min(100, (attempts / 10) * 100)}%` }}
-                />
-              </div>
-            </div>
           ) : null}
           {locked ? (
             <p className="mt-1 text-xs text-slate-500">Locked — finish earlier ops.</p>

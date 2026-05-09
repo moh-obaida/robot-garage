@@ -8,14 +8,6 @@ export type MiniGameKind =
   | 'balanceTest'
   | 'trainingBattle'
   | 'memoryCircuit'
-  | 'garageKart'
-  | 'scrapRacer'
-  | 'batteryDelivery'
-  | 'hoverBoard'
-  | 'magnetTruck'
-  | 'obstacleAlley'
-  | 'timeTrial'
-  | 'vehicleUpgrade'
 
 export type QuestType = 'story' | 'minigame'
 
