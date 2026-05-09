@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Orbitron", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(34, 211, 238, 0.18), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 50%, rgba(168, 85, 247, 0.12), transparent 50%),
+    linear-gradient(180deg, #070a12 0%, #0c111c 40%, #080c14 100%);
+  color: #e2e8f0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px var(--robot-glow, #22d3ee));
+    opacity: 1;
+  }
+  50% {
+    filter: drop-shadow(0 0 18px var(--robot-glow, #22d3ee));
+    opacity: 0.95;
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.robot-float {
+  animation: float-y 4s ease-in-out infinite;
+}
+
+.robot-glow-anim {
+  animation: pulse-glow 2.8s ease-in-out infinite;
+}
+
+.scanlines::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  opacity: 0.35;
+  z-index: 50;
+}
