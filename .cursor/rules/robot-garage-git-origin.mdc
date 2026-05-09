@@ -1,0 +1,25 @@
+---
+description: Robot Garage — canonical git remote origin for pushes and PRs
+alwaysApply: true
+---
+
+# Robot Garage — `git remote origin`
+
+When the workspace is **robot-garage** (path or repo folder name includes `robot-garage`, or work is clearly for that GitHub project), ensure `origin` is correct **before** `git push`, opening PRs, or recommending remotes.
+
+**Canonical URL:** `https://github.com/moh-obaida/robot-garage.git`
+
+## Check and fix (repo root)
+
+1. Run `git remote -v` (or infer from context).
+2. If there is no `origin`:
+   ```bash
+   git remote add origin https://github.com/moh-obaida/robot-garage.git
+   ```
+3. If `origin` exists but the URL is not the canonical one above:
+   ```bash
+   git remote set-url origin https://github.com/moh-obaida/robot-garage.git
+   ```
+4. Confirm with `git remote -v`.
+
+Only change remotes for this project context; do not force-push or rewrite history unless the user explicitly requests it.

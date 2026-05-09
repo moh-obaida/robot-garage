@@ -1,3 +1,5 @@
+export type JunkyardDifficulty = 'easy' | 'standard' | 'challenge'
+
 export type MiniGameKind =
   | 'coreCharge'
   | 'wireRepair'
@@ -6,6 +8,14 @@ export type MiniGameKind =
   | 'balanceTest'
   | 'trainingBattle'
   | 'memoryCircuit'
+  | 'garageKart'
+  | 'scrapRacer'
+  | 'batteryDelivery'
+  | 'hoverBoard'
+  | 'magnetTruck'
+  | 'obstacleAlley'
+  | 'timeTrial'
+  | 'vehicleUpgrade'
 
 export type QuestType = 'story' | 'minigame'
 
@@ -23,6 +33,7 @@ export interface QuestDef {
   unlockBadgeId?: string
   type: QuestType
   miniGame?: MiniGameKind
+  junkyardDifficulty?: JunkyardDifficulty
   /** For score-based minigames: minimum score to count as mission success */
   passScore?: number
 }
