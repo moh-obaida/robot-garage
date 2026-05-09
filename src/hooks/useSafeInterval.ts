@@ -1,12 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
 
-/** Interval cleared on unmount or when delay becomes null. */
-export function useSafeInterval(callback: () => void, delayMs: number | null) {
-  const cb = useRef(callback);
-  cb.current = callback;
+/** Like setInterval, but clears on unmount and when delay is null. */
+export function useSafeInterval(callback: () => void, delay: number | null) {
+  const cbRef = useRef(callback)
+
   useEffect(() => {
-    if (delayMs === null) return;
-    const id = window.setInterval(() => cb.current(), delayMs);
-    return () => window.clearInterval(id);
-  }, [delayMs]);
+    cbRef.current = callback
+  }, [callback])
+
+  useEffect(() => {
+    if (delay === null) return
+    const id = window.setInterval(() => cbRef.current(), delay)
+    return () => window.clearInterval(id)
+  }, [delay])
 }
