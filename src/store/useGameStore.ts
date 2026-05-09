@@ -14,6 +14,7 @@ import {
   LAUNCH_CHECKLIST_BONUS_XP,
   launchChecklistComplete,
 } from '../data/launchReadiness'
+import { PERSIST_STORE_VERSION } from '../config/persistVersion'
 import {
   DEFAULT_SNAPSHOT,
   STORAGE_V1,
@@ -43,7 +44,6 @@ interface GameState extends MigratedSnapshot {
   syncColorUnlocks: () => void
   recordVisit: (pathname: string) => void
   setComfort: (patch: Partial<ComfortSettings>) => void
-  completeLaunchStep: (id: LaunchStepId) => void
   claimLaunchChecklistBonus: () => { ok: boolean; message?: string }
 }
 
@@ -435,7 +435,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 5,
+      version: PERSIST_STORE_VERSION,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,

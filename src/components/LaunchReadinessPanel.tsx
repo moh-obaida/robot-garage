@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   LAUNCH_CHECKLIST,
   LAUNCH_CHECKLIST_BONUS_SCRAP,
@@ -7,6 +8,7 @@ import {
 import { useGameStore } from '../store/useGameStore'
 
 export function LaunchReadinessPanel() {
+  const [feedback, setFeedback] = useState<string | null>(null)
   const completedMissions = useGameStore((s) => s.completedMissions)
   const upgradeLevels = useGameStore((s) => s.upgradeLevels)
   const arenaWins = useGameStore((s) => s.arenaWins)
@@ -83,10 +85,9 @@ export function LaunchReadinessPanel() {
           type="button"
           disabled={!allMet || claimed}
           onClick={() => {
+            setFeedback(null)
             const r = claimLaunchChecklistBonus()
-            if (!r.ok && r.message) {
-              window.alert(r.message)
-            }
+            if (!r.ok && r.message) setFeedback(r.message)
           }}
           className={[
             'rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition',
@@ -97,6 +98,9 @@ export function LaunchReadinessPanel() {
         >
           {claimed ? 'Launch bonus collected' : 'Collect launch bonus'}
         </button>
+        {feedback ? (
+          <p className="w-full text-xs text-amber-200/90">{feedback}</p>
+        ) : null}
       </div>
 
       <div className="mt-6 border-t border-slate-800 pt-4">
