@@ -102,3 +102,4 @@ export const LAUNCH_CHECKLIST: LaunchChecklistItem[] = [
 export function launchChecklistComplete(s: LaunchChecklistContext): boolean {
   return LAUNCH_CHECKLIST.every((i) => i.met(s))
 }
+

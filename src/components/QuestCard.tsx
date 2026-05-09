@@ -15,6 +15,8 @@ function typeLabel(type: QuestDef['type'], mini?: QuestDef['miniGame']) {
       return 'Balance'
     case 'trainingBattle':
       return 'Battle'
+    case 'memoryCircuit':
+      return 'Memory'
     default:
       return 'Quest'
   }

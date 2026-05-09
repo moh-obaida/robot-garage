@@ -47,7 +47,13 @@ export function MiniGameModal({
       case 'wireRepair':
         return <WireRepairGame key={k} onFinish={relayFinish} />
       case 'junkyardSearch':
-        return <JunkyardSearchGame key={k} onFinish={relayFinish} />
+        return (
+          <JunkyardSearchGame
+            key={k}
+            difficulty={quest.junkyardDifficulty ?? 'standard'}
+            onFinish={relayFinish}
+          />
+        )
       case 'speedTest':
         return <SpeedTestGame key={k} onFinish={relayFinish} />
       case 'balanceTest':

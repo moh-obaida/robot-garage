@@ -99,7 +99,9 @@ export function LaunchReadinessPanel() {
           {claimed ? 'Launch bonus collected' : 'Collect launch bonus'}
         </button>
         {feedback ? (
-          <p className="w-full text-xs text-amber-200/90">{feedback}</p>
+          <p className="w-full text-xs text-amber-200/90" role="status">
+            {feedback}
+          </p>
         ) : null}
       </div>
 
