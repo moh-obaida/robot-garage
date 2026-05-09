@@ -10,10 +10,6 @@ function randomCue(): Cue {
   return opts[Math.floor(Math.random() * opts.length)]!
 }
 
-function deadlineFromNow(ms: number): number {
-  return Date.now() + ms
-}
-
 export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => void }) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [round, setRound] = useState(0)
@@ -49,7 +45,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     const id = window.setTimeout(() => {
       setPhase('lost')
       safeFinish({ success: false, score: roundRef.current })
-    }, Math.max(0, deadline - deadlineFromNow(0)))
+    }, Math.max(0, deadline - Date.now()))
     return () => window.clearTimeout(id)
   }, [phase, deadline, safeFinish])
 
@@ -79,8 +75,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
         {phase === 'intro' && `Hit the matching shift — ${scrapRacerConfig.rounds} pulls.`}
         {phase === 'race' && (
           <>
-            Round {round + 1}/{scrapRacerConfig.rounds}:{' '}
-            <strong className="text-cyan-300">{label}</strong>
+            Round {round + 1}/{scrapRacerConfig.rounds}: <strong className="text-cyan-300">{label}</strong>
           </>
         )}
         {phase === 'won' && 'Transmission synced!'}

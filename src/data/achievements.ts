@@ -43,6 +43,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     title: 'Level Six',
     description: 'Reach pilot level 6.',
   },
+  {
+    id: 'night_haul',
+    title: 'Night Haul',
+    description: 'Clear the Night Haul chapter in World.',
+  },
 ]
 
 export function evaluateNewAchievementIds(s: MigratedSnapshot): string[] {
@@ -59,6 +64,7 @@ export function evaluateNewAchievementIds(s: MigratedSnapshot): string[] {
   push('story_clear', s.completedMissions.length >= QUESTS.length)
   push('trophy_hunter', s.trophies >= 100)
   push('level_six', s.level >= 6)
+  push('night_haul', Boolean(s.storyChapters?.['night-haul']?.completedOnce))
 
   return next
 }

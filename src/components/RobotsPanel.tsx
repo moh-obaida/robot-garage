@@ -26,7 +26,9 @@ export function RobotsPanel() {
                 ? `After “${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}”`
                 : b.unlock.kind === 'level'
                   ? `Pilot level ${b.unlock.minLevel}+`
-                  : `“${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}” & Lv ${b.unlock.minLevel}`
+                  : b.unlock.kind === 'chapter_level'
+                    ? `“${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}” & Lv ${b.unlock.minLevel}`
+                    : null
           return (
             <li key={b.id}>
               <button
