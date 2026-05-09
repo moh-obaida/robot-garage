@@ -13,8 +13,10 @@ type Phase = 'intro' | 'haul' | 'won' | 'lost'
 
 export function MagnetTruckGame({ onFinish }: { onFinish: (r: MiniGameResult) => void }) {
   const [phase, setPhase] = useState<Phase>('intro')
-  const [renderTick, setRenderTick] = useState(0)
   const [truckX, setTruckX] = useState(50)
+  const [pieces, setPieces] = useState<Piece[]>([])
+  const [caught, setCaught] = useState(0)
+  const [spawned, setSpawned] = useState(0)
 
   const piecesRef = useRef<Piece[]>([])
   const catchRef = useRef(0)
@@ -24,8 +26,6 @@ export function MagnetTruckGame({ onFinish }: { onFinish: (r: MiniGameResult) =>
   const truckXRef = useRef(50)
   const phaseRef = useRef<Phase>('intro')
   const finishedRef = useRef(false)
-
-  const bump = useCallback(() => setRenderTick((t) => t + 1), [])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -50,11 +50,13 @@ export function MagnetTruckGame({ onFinish }: { onFinish: (r: MiniGameResult) =>
     spawnedRef.current = 0
     nextIdRef.current = 0
     tickRef.current = 0
+    setPieces([])
+    setCaught(0)
+    setSpawned(0)
     setTruckX(50)
     truckXRef.current = 50
     setPhase('haul')
-    bump()
-  }, [bump])
+  }, [])
 
   useSafeInterval(
     () => {
@@ -70,10 +72,10 @@ export function MagnetTruckGame({ onFinish }: { onFinish: (r: MiniGameResult) =>
         if (y >= cfg.fieldHeight) {
           if (Math.abs(p.x - tx) <= half) {
             catchRef.current += 1
+            setCaught(catchRef.current)
             if (catchRef.current >= cfg.catchesToWin) {
               setPhase('won')
               safeFinish({ success: true, score: 100 + catchRef.current * 8 })
-              bump()
               return
             }
           }
@@ -85,30 +87,27 @@ export function MagnetTruckGame({ onFinish }: { onFinish: (r: MiniGameResult) =>
 
       if (spawnedRef.current < cfg.totalDrops && tickRef.current % 4 === 0) {
         spawnedRef.current += 1
+        setSpawned(spawnedRef.current)
         const x = 12 + Math.random() * 76
         piecesRef.current.push({ id: nextIdRef.current++, x, y: 0 })
       }
+
+      setPieces([...piecesRef.current])
 
       if (spawnedRef.current >= cfg.totalDrops && piecesRef.current.length === 0) {
         if (catchRef.current < cfg.catchesToWin) {
           setPhase('lost')
           safeFinish({ success: false, score: catchRef.current })
         }
-        bump()
-        return
       }
-      bump()
     },
     phase === 'haul' ? magnetTruckConfig.tickMs : null,
   )
 
-  const pieces = piecesRef.current
-  const caught = catchRef.current
-  const spawned = spawnedRef.current
   const cfg = magnetTruckConfig
 
   return (
-    <div className="space-y-3" data-sync={renderTick}>
+    <div className="space-y-3">
       <p className="text-sm text-slate-400">
         {phase === 'intro' && `Catch ${cfg.catchesToWin} loads with the boom before the yard clears.`}
         {phase === 'haul' && (

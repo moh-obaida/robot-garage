@@ -73,6 +73,7 @@ export function Missions() {
 
       {active ? (
         <MiniGameModal
+          key={active.id}
           quest={active}
           allowRewards={!completedMissions.includes(active.id)}
           trainingProfile={trainingProfile}
