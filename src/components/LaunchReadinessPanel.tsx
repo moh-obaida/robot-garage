@@ -3,9 +3,6 @@ import {
   LAUNCH_CHECKLIST,
   LAUNCH_CHECKLIST_BONUS_SCRAP,
   LAUNCH_CHECKLIST_BONUS_XP,
-  LAUNCH_PILOT_STEP_ORDER,
-  LAUNCH_STEP_META,
-  allLaunchStepsComplete,
   launchChecklistComplete,
 } from '../data/launchReadiness'
 import { useGameStore } from '../store/useGameStore'
@@ -16,12 +13,10 @@ export function LaunchReadinessPanel() {
   const upgradeLevels = useGameStore((s) => s.upgradeLevels)
   const arenaWins = useGameStore((s) => s.arenaWins)
   const visitedPaths = useGameStore((s) => s.visitedPaths)
-  const launchReadiness = useGameStore((s) => s.launchReadiness)
-  const claimed = launchReadiness.completionBonusClaimed
+  const claimed = useGameStore((s) => s.launchReadiness.completionBonusClaimed)
   const reducedMotion = useGameStore((s) => s.comfort.reducedMotion)
   const highContrast = useGameStore((s) => s.comfort.highContrast)
   const setComfort = useGameStore((s) => s.setComfort)
-  const completeLaunchStep = useGameStore((s) => s.completeLaunchStep)
   const claimLaunchChecklistBonus = useGameStore((s) => s.claimLaunchChecklistBonus)
 
   const slice = {
@@ -31,8 +26,6 @@ export function LaunchReadinessPanel() {
     visitedPaths,
   }
   const allMet = launchChecklistComplete(slice)
-  const pilotDone = allLaunchStepsComplete(launchReadiness)
-  const canCollect = allMet && pilotDone && !claimed
 
   return (
     <section className="rounded-2xl border border-cyan-500/25 bg-slate-950/70 p-4 shadow-[0_0_32px_rgba(34,211,238,0.08)]">
@@ -53,13 +46,9 @@ export function LaunchReadinessPanel() {
           <span className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-200">
             Bonus banked
           </span>
-        ) : canCollect ? (
+        ) : allMet ? (
           <span className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-100">
             Ready to collect
-          </span>
-        ) : allMet && !pilotDone ? (
-          <span className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-100">
-            Sign-off pending
           </span>
         ) : (
           <span className="rounded-lg border border-slate-600 bg-slate-900/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -91,55 +80,10 @@ export function LaunchReadinessPanel() {
         })}
       </ul>
 
-      <div className="mt-6 border-t border-slate-800 pt-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Pilot sign-off
-        </p>
-        <p className="mt-1 max-w-xl text-xs text-slate-400">
-          Stamp both items after you have personally verified saves and navigation. Required before the
-          launch stipend unlocks.
-        </p>
-        <ul className="mt-3 space-y-2">
-          {LAUNCH_PILOT_STEP_ORDER.map((stepId) => {
-            const meta = LAUNCH_STEP_META[stepId]
-            const stamped = Boolean(launchReadiness.stepCompletion[stepId])
-            return (
-              <li
-                key={stepId}
-                className={[
-                  'flex flex-wrap items-start justify-between gap-2 rounded-xl border px-3 py-2 text-xs',
-                  stamped
-                    ? 'border-emerald-500/35 bg-emerald-500/5 text-slate-200'
-                    : 'border-slate-700/80 bg-slate-900/40 text-slate-400',
-                ].join(' ')}
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-100">{meta.label}</p>
-                  <p className="text-[11px] text-slate-500">{meta.hint}</p>
-                </div>
-                {stamped ? (
-                  <span className="shrink-0 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200">
-                    Signed
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => completeLaunchStep(stepId)}
-                    className="shrink-0 rounded-lg border border-cyan-500/50 bg-cyan-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-100 hover:bg-cyan-500/25"
-                  >
-                    Sign off
-                  </button>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={!canCollect}
+          disabled={!allMet || claimed}
           onClick={() => {
             setFeedback(null)
             const r = claimLaunchChecklistBonus()
@@ -147,7 +91,7 @@ export function LaunchReadinessPanel() {
           }}
           className={[
             'rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition',
-            !canCollect
+            !allMet || claimed
               ? 'cursor-not-allowed border border-slate-700 bg-slate-900 text-slate-500'
               : 'border border-amber-400/60 bg-amber-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.35)] hover:bg-amber-300',
           ].join(' ')}

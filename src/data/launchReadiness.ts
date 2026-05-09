@@ -103,23 +103,3 @@ export function launchChecklistComplete(s: LaunchChecklistContext): boolean {
   return LAUNCH_CHECKLIST.every((i) => i.met(s))
 }
 
-/** Pilot QA sign-off stamps (stored in `launchReadiness.stepCompletion`). */
-export const LAUNCH_PILOT_STEP_ORDER = ['stash-verified', 'controls-ok'] as const
-
-export type LaunchStepId = (typeof LAUNCH_PILOT_STEP_ORDER)[number]
-
-export const LAUNCH_STEP_META: Record<LaunchStepId, { label: string; hint: string }> = {
-  'stash-verified': {
-    label: 'Save channel OK',
-    hint: 'You have seen scrap/XP change and refresh still loads your bay.',
-  },
-  'controls-ok': {
-    label: 'Bay navigation OK',
-    hint: 'You can open missions, upgrades, and return to the dashboard.',
-  },
-}
-
-export function allLaunchStepsComplete(lr: LaunchReadinessState): boolean {
-  return LAUNCH_PILOT_STEP_ORDER.every((id) => Boolean(lr.stepCompletion[id]))
-}
-
