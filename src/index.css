@@ -69,3 +69,40 @@ body {
   opacity: 0.35;
   z-index: 50;
 }
+
+/* Phase 10 — comfort */
+html.rg-reduced-motion .robot-float,
+html.rg-reduced-motion .robot-glow-anim {
+  animation: none !important;
+}
+
+html.rg-reduced-motion .scanlines::after {
+  opacity: 0.12;
+}
+
+html.rg-high-contrast {
+  --hc-border: rgba(34, 211, 238, 0.55);
+}
+
+html.rg-high-contrast .border-slate-700\/80,
+html.rg-high-contrast .border-slate-800\/80,
+html.rg-high-contrast .border-slate-800\/90 {
+  border-color: var(--hc-border) !important;
+}
+
+html.rg-reduce-motion *,
+html.rg-reduce-motion *::before,
+html.rg-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.rg-high-contrast body {
+  color: #f8fafc;
+}
+
+html.rg-high-contrast .scanlines::after {
+  opacity: 0.12;
+}

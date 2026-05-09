@@ -48,8 +48,11 @@ export function mergeLaunchReadiness(raw: unknown): LaunchReadinessState {
   const stepCompletion: Record<string, string> = {}
   if (o.stepCompletion && typeof o.stepCompletion === 'object') {
     for (const [k, v] of Object.entries(o.stepCompletion as Record<string, unknown>)) {
-      if (k && typeof v === 'string' && v.length > 0) {
+      if (!k) continue
+      if (typeof v === 'string' && v.length > 0) {
         stepCompletion[k] = v.slice(0, 64)
+      } else if (v === true) {
+        stepCompletion[k] = '1'
       }
     }
   }
@@ -98,4 +101,50 @@ export const LAUNCH_CHECKLIST: LaunchChecklistItem[] = [
 
 export function launchChecklistComplete(s: LaunchChecklistContext): boolean {
   return LAUNCH_CHECKLIST.every((i) => i.met(s))
+}
+
+/** Extra pilot sign-off stamps required before the launch bonus (stored in `launchReadiness.stepCompletion`). */
+export const LAUNCH_PILOT_STEP_ORDER = ['stash-verified', 'controls-ok'] as const
+
+export type LaunchStepId = (typeof LAUNCH_PILOT_STEP_ORDER)[number]
+
+export const LAUNCH_STEP_META: Record<
+  LaunchStepId,
+  { label: string; hint: string }
+> = {
+  'stash-verified': {
+    label: 'Save channel OK',
+    hint: 'You have seen scrap/XP change and refresh still loads your bay.',
+  },
+  'controls-ok': {
+    label: 'Bay navigation OK',
+    hint: 'You can open missions, upgrades, and return to the dashboard.',
+  },
+}
+
+export function allLaunchStepsComplete(lr: LaunchReadinessState): boolean {
+  return LAUNCH_PILOT_STEP_ORDER.every((id) => Boolean(lr.stepCompletion[id]))
+}
+
+/** Extra pilot sign-off stamps required before the launch bonus (stored in `launchReadiness.stepCompletion`). */
+export const LAUNCH_PILOT_STEP_ORDER = ['stash-verified', 'controls-ok'] as const
+
+export type LaunchStepId = (typeof LAUNCH_PILOT_STEP_ORDER)[number]
+
+export const LAUNCH_STEP_META: Record<
+  LaunchStepId,
+  { label: string; hint: string }
+> = {
+  'stash-verified': {
+    label: 'Save channel OK',
+    hint: 'You have seen scrap/XP change and refresh still loads your bay.',
+  },
+  'controls-ok': {
+    label: 'Bay navigation OK',
+    hint: 'You can open missions, upgrades, and return to the dashboard.',
+  },
+}
+
+export function allLaunchStepsComplete(lr: LaunchReadinessState): boolean {
+  return LAUNCH_PILOT_STEP_ORDER.every((id) => Boolean(lr.stepCompletion[id]))
 }
