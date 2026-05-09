@@ -1,12 +1,13 @@
-import { ROBOT_CATALOG, STORY_CHAPTER_DEFS } from '../data/worldPhase8'
 import { useGameStore } from '../store/useGameStore'
-import { isRobotUnlocked } from '../utils/robotUnlock'
+
+const ROBOTS = [
+  { id: 'bolt-x', name: 'Bolt-X', type: 'Standard chassis', color: '#22d3ee', minLevel: 1 },
+  { id: 'spark-7', name: 'Spark-7', type: 'Sprinter frame', color: '#a855f7', minLevel: 3 },
+  { id: 'titan-mk2', name: 'Titan Mk II', type: 'Heavy platform', color: '#f59e0b', minLevel: 5 },
+] as const
 
 export function RobotsPanel() {
-  const snap = useGameStore((s) => ({
-    storyChapters: s.storyChapters,
-    xp: s.xp,
-  }))
+  const level = useGameStore((s) => s.level)
   const selected = useGameStore((s) => s.selectedRobotId)
   const selectRobot = useGameStore((s) => s.selectRobot)
 
@@ -16,17 +17,10 @@ export function RobotsPanel() {
         Robots
       </h3>
       <ul className="mt-2 space-y-2">
-        {ROBOT_CATALOG.map((b) => {
-          const ok = isRobotUnlocked(b.id, snap)
+        {ROBOTS.map((b) => {
+          const ok = level >= b.minLevel
           const active = selected === b.id
-          const hint =
-            b.unlock.kind === 'starter'
-              ? null
-              : b.unlock.kind === 'chapter'
-                ? `After “${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}”`
-                : b.unlock.kind === 'level'
-                  ? `Pilot level ${b.unlock.minLevel}+`
-                  : `“${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}” & Lv ${b.unlock.minLevel}`
+          const hint = !ok ? `Unlocks at pilot level ${b.minLevel}` : null
           return (
             <li key={b.id}>
               <button
@@ -52,9 +46,7 @@ export function RobotsPanel() {
                 <div>
                   <p className="font-bold text-slate-100">{b.name}</p>
                   <p className="text-[10px] text-slate-500">{b.type}</p>
-                  {!ok && hint ? (
-                    <p className="text-[10px] text-amber-200/80">{hint}</p>
-                  ) : null}
+                  {hint ? <p className="text-[10px] text-amber-200/80">{hint}</p> : null}
                 </div>
               </button>
             </li>

@@ -36,7 +36,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     roundRef.current = 0
     setRound(0)
     setCue(randomCue())
-    setDeadline(Date.now() + scrapRacerConfig.cueMs)
+    setDeadline(deadlineFromNow(scrapRacerConfig.cueMs))
     setPhase('race')
   }, [])
 
@@ -68,7 +68,7 @@ export function ScrapRacerGame({ onFinish }: { onFinish: (r: MiniGameResult) => 
     }
     setRound(nextRound)
     setCue(randomCue())
-    setDeadline(Date.now() + scrapRacerConfig.cueMs)
+    setDeadline(deadlineFromNow(scrapRacerConfig.cueMs))
   }
 
   const label = cue === 'left' ? '←' : cue === 'right' ? '→' : '↑'

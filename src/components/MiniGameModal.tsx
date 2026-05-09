@@ -6,8 +6,14 @@ import { JunkyardSearchGame } from '../minigames/JunkyardSearchGame'
 import { SpeedTestGame } from '../minigames/SpeedTestGame'
 import { TrainingBattleGame, type TrainingCombatProfile } from '../minigames/TrainingBattleGame'
 import { MemoryCircuitGame } from '../minigames/MemoryCircuitGame'
+import { BatteryDeliveryGame } from '../minigames/BatteryDeliveryGame'
+import { GarageKartGame } from '../minigames/GarageKartGame'
+import { HoverBoardGame } from '../minigames/HoverBoardGame'
+import { MagnetTruckGame } from '../minigames/MagnetTruckGame'
+import { ObstacleAlleyGame } from '../minigames/ObstacleAlleyGame'
 import { ScrapRacerGame } from '../minigames/ScrapRacerGame'
 import { TimeTrialGame } from '../minigames/TimeTrialGame'
+import { VehicleUpgradeGame } from '../minigames/VehicleUpgradeGame'
 import { WireRepairGame } from '../minigames/WireRepairGame'
 
 type Step = 'how' | 'play' | 'result'
@@ -64,10 +70,22 @@ export function MiniGameModal({
         return <TrainingBattleGame key={k} player={trainingProfile} onFinish={relayFinish} />
       case 'memoryCircuit':
         return <MemoryCircuitGame key={k} onFinish={relayFinish} />
+      case 'garageKart':
+        return <GarageKartGame key={k} onFinish={relayFinish} />
       case 'scrapRacer':
         return <ScrapRacerGame key={k} onFinish={relayFinish} />
+      case 'batteryDelivery':
+        return <BatteryDeliveryGame key={k} onFinish={relayFinish} />
+      case 'hoverBoard':
+        return <HoverBoardGame key={k} onFinish={relayFinish} />
+      case 'magnetTruck':
+        return <MagnetTruckGame key={k} onFinish={relayFinish} />
+      case 'obstacleAlley':
+        return <ObstacleAlleyGame key={k} onFinish={relayFinish} />
       case 'timeTrial':
         return <TimeTrialGame key={k} onFinish={relayFinish} />
+      case 'vehicleUpgrade':
+        return <VehicleUpgradeGame key={k} onFinish={relayFinish} />
       default:
         return null
     }
