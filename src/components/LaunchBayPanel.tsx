@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   LAUNCH_CHECKLIST,
   LAUNCH_CHECKLIST_BONUS_SCRAP,
@@ -8,6 +9,7 @@ import { useGameStore } from '../store/useGameStore'
 import { Panel } from './Panel'
 
 export function LaunchBayPanel() {
+  const [claimMsg, setClaimMsg] = useState<string | null>(null)
   const completedMissions = useGameStore((s) => s.completedMissions)
   const upgradeLevels = useGameStore((s) => s.upgradeLevels)
   const arenaWins = useGameStore((s) => s.arenaWins)
@@ -51,6 +53,11 @@ export function LaunchBayPanel() {
         <p className="mt-1 text-xs text-amber-100/80">
           +{LAUNCH_CHECKLIST_BONUS_SCRAP} scrap · +{LAUNCH_CHECKLIST_BONUS_XP} XP (once per save)
         </p>
+        {claimMsg ? (
+          <p className="mt-2 text-xs text-amber-100/90" role="status">
+            {claimMsg}
+          </p>
+        ) : null}
         {bonusClaimed ? (
           <p className="mt-2 text-xs font-semibold text-emerald-200">Collected — thanks for touring the garage.</p>
         ) : (
@@ -58,10 +65,9 @@ export function LaunchBayPanel() {
             type="button"
             disabled={!allDone}
             onClick={() => {
+              setClaimMsg(null)
               const r = claimLaunchChecklistBonus()
-              if (!r.ok && r.message) {
-                window.alert(r.message)
-              }
+              if (!r.ok && r.message) setClaimMsg(r.message)
             }}
             className="mt-3 w-full rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-slate-950 shadow-[0_0_18px_rgba(251,191,36,0.35)] transition enabled:hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
           >

@@ -218,7 +218,11 @@ export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
   base.defeatedOpponents = safeStringArray(state.defeatedOpponents)
   base.unlockedBadges = safeStringArray(state.unlockedBadges)
   base.achievementUnlocks = safeStringArray(state.achievementUnlocks)
-  base.visitedPaths = safeStringArray(state.visitedPaths)
+  base.visitedPaths = [
+    ...new Set(
+      safeStringArray(state.visitedPaths).map((x) => (x.startsWith('/') ? x : `/${x}`)),
+    ),
+  ]
 
   base.comfort = mergeComfort(state.comfort)
   base.launchReadiness = mergeLaunchReadiness(state.launchReadiness)

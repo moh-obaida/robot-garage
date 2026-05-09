@@ -48,8 +48,11 @@ export function mergeLaunchReadiness(raw: unknown): LaunchReadinessState {
   const stepCompletion: Record<string, string> = {}
   if (o.stepCompletion && typeof o.stepCompletion === 'object') {
     for (const [k, v] of Object.entries(o.stepCompletion as Record<string, unknown>)) {
-      if (k && typeof v === 'string' && v.length > 0) {
+      if (!k) continue
+      if (typeof v === 'string' && v.length > 0) {
         stepCompletion[k] = v.slice(0, 64)
+      } else if (v === true) {
+        stepCompletion[k] = '1'
       }
     }
   }

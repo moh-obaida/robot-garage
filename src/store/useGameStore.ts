@@ -43,6 +43,7 @@ interface GameState extends MigratedSnapshot {
   syncColorUnlocks: () => void
   recordVisit: (pathname: string) => void
   setComfort: (patch: Partial<ComfortSettings>) => void
+  completeLaunchStep: (id: LaunchStepId) => void
   claimLaunchChecklistBonus: () => { ok: boolean; message?: string }
 }
 
