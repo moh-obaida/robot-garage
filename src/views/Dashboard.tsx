@@ -8,6 +8,7 @@ import { GarageHeroScene } from '../components/GarageHeroScene'
 import { GarageWorkbenchPanel } from '../components/GarageWorkbenchPanel'
 import { PvpPreviewPanel } from '../components/PvpPreviewPanel'
 import { RobotsPanel } from '../components/RobotsPanel'
+import { LaunchReadinessPanel } from '../components/LaunchReadinessPanel'
 import { UpgradePartsStrip } from '../components/UpgradePartsStrip'
 import { useGameStore } from '../store/useGameStore'
 import type { UpgradeId } from '../types/game'
@@ -54,6 +55,8 @@ export function Dashboard() {
         <GarageColorsStrip />
         <AchievementsStrip />
       </div>
+
+      <LaunchReadinessPanel />
 
       <BottomActionBar />
     </div>
