@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { PERSIST_STORE_VERSION } from '../config/persistVersion'
 import { ROUTES } from '../types/game'
 import { GameLogo } from './GameLogo'
 import { SidebarMenu } from './SidebarMenu'
@@ -107,6 +108,10 @@ export function GameShell({
           </header>
 
           <main className="flex-1 overflow-x-hidden p-3 md:p-5">{children}</main>
+          <footer className="border-t border-slate-800/70 px-3 py-2 text-center text-[10px] text-slate-600 md:px-5">
+            Save schema v{PERSIST_STORE_VERSION} · browser local storage ·{' '}
+            {import.meta.env.PROD ? 'production' : 'development'}
+          </footer>
         </div>
       </div>
     </div>
