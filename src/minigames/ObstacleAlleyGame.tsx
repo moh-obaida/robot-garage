@@ -15,6 +15,7 @@ export function ObstacleAlleyGame({ onFinish }: { onFinish: (r: MiniGameResult) 
   const [hazard, setHazard] = useState<Hazard>('low')
   const [deadline, setDeadline] = useState<number | null>(null)
   const finishedRef = useRef(false)
+  const roundRef = useRef(0)
 
   const safeFinish = useCallback(
     (r: MiniGameResult) => {
@@ -27,6 +28,7 @@ export function ObstacleAlleyGame({ onFinish }: { onFinish: (r: MiniGameResult) 
 
   const start = useCallback(() => {
     finishedRef.current = false
+    roundRef.current = 0
     setRound(0)
     setHazard(randomHazard())
     setDeadline(Date.now() + obstacleAlleyConfig.reactMs)
@@ -34,13 +36,17 @@ export function ObstacleAlleyGame({ onFinish }: { onFinish: (r: MiniGameResult) 
   }, [])
 
   useEffect(() => {
+    roundRef.current = round
+  }, [round])
+
+  useEffect(() => {
     if (phase !== 'go' || deadline === null) return
     const id = window.setTimeout(() => {
       setPhase('lost')
-      safeFinish({ success: false, score: round })
+      safeFinish({ success: false, score: roundRef.current })
     }, Math.max(0, deadline - Date.now()))
     return () => window.clearTimeout(id)
-  }, [phase, deadline, round, safeFinish])
+  }, [phase, deadline, safeFinish])
 
   const react = (move: 'duck' | 'jump') => {
     if (phase !== 'go') return

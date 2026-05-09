@@ -144,6 +144,53 @@ function normalizeColorId(id: string): string {
   return COLOR_ALIASES[id] ?? id
 }
 
+function mergeStoryChapters(raw: unknown): Record<StoryChapterId, StoryChapterProgress> {
+  const base = defaultStoryChapters()
+  if (!raw || typeof raw !== 'object') return base
+  const o = raw as Record<string, unknown>
+  for (const id of STORY_CHAPTER_IDS) {
+    const v = o[id]
+    if (v && typeof v === 'object') {
+      const e = v as Record<string, unknown>
+      base[id] = {
+        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : base[id]!.unlocked,
+        completedOnce:
+          typeof e.completedOnce === 'boolean' ? e.completedOnce : base[id]!.completedOnce,
+      }
+    }
+  }
+  return repairStoryChain(base)
+}
+
+function mergeCircuitCupClaimed(raw: unknown): Record<CircuitCupId, boolean> {
+  const b = { ...defaultCircuitCupClaimed() }
+  if (!raw || typeof raw !== 'object') return b
+  const o = raw as Record<string, unknown>
+  for (const id of CIRCUIT_CUP_IDS) {
+    const v = o[id]
+    if (typeof v === 'boolean') b[id] = v
+  }
+  return b
+}
+
+function mergeWorldBosses(raw: unknown): Record<WorldBossId, WorldBossProgress> {
+  const b = defaultWorldBosses()
+  if (!raw || typeof raw !== 'object') return b
+  const o = raw as Record<string, unknown>
+  for (const id of WORLD_BOSS_IDS) {
+    const v = o[id]
+    if (v && typeof v === 'object') {
+      const e = v as Record<string, unknown>
+      b[id] = {
+        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : b[id].unlocked,
+        defeatedOnce:
+          typeof e.defeatedOnce === 'boolean' ? e.defeatedOnce : b[id].defeatedOnce,
+      }
+    }
+  }
+  return b
+}
+
 export interface MigratedSnapshot {
   scrap: number
   xp: number
@@ -196,53 +243,6 @@ export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
   factoryFirstBonusClaimed: false,
   circuitCupClaimed: defaultCircuitCupClaimed(),
   worldBosses: defaultWorldBosses(),
-}
-
-function mergeStoryChapters(raw: unknown): Record<StoryChapterId, StoryChapterProgress> {
-  const base = defaultStoryChapters()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of STORY_CHAPTER_IDS) {
-    const v = o[id]
-    if (v && typeof v === 'object') {
-      const e = v as Record<string, unknown>
-      base[id] = {
-        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : base[id].unlocked,
-        completedOnce:
-          typeof e.completedOnce === 'boolean' ? e.completedOnce : base[id].completedOnce,
-      }
-    }
-  }
-  return repairStoryChain(base)
-}
-
-function mergeCircuitCupClaimed(raw: unknown): Record<CircuitCupId, boolean> {
-  const base = defaultCircuitCupClaimed()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of CIRCUIT_CUP_IDS) {
-    const v = o[id]
-    if (typeof v === 'boolean') base[id] = v
-  }
-  return base
-}
-
-function mergeWorldBosses(raw: unknown): Record<WorldBossId, WorldBossProgress> {
-  const base = defaultWorldBosses()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of WORLD_BOSS_IDS) {
-    const v = o[id]
-    if (v && typeof v === 'object') {
-      const e = v as Record<string, unknown>
-      base[id] = {
-        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : base[id].unlocked,
-        defeatedOnce:
-          typeof e.defeatedOnce === 'boolean' ? e.defeatedOnce : base[id].defeatedOnce,
-      }
-    }
-  }
-  return base
 }
 
 export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
