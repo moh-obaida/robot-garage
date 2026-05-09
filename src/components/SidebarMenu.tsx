@@ -5,6 +5,7 @@ const ITEMS: { to: string; label: string; accent?: boolean }[] = [
   { to: ROUTES.play, label: 'PLAY', accent: true },
   { to: ROUTES.garage, label: 'GARAGE' },
   { to: ROUTES.missions, label: 'MISSIONS' },
+  { to: ROUTES.world, label: 'WORLD' },
   { to: ROUTES.vehicles, label: 'VEHICLES' },
   { to: ROUTES.arcade, label: 'ARCADE' },
   { to: ROUTES.arena, label: 'PVP ARENA' },

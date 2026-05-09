@@ -1,7 +1,13 @@
 node_modules
 dist
-.cursor
-.DS_Store
+dist-ssr
 *.local
+
+# Editor directories and files
+.cursor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
 .env
 .env.*
