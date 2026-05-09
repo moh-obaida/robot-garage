@@ -136,7 +136,7 @@ export const useGameStore = create<GameState>()(
         const raw = pathname?.trim() || '/'
         const p = raw.startsWith('/') ? raw : `/${raw}`
         set((s) => {
-          if (s.visitedPaths.includes(p)) return {}
+          if (s.visitedPaths.includes(p)) return s
           return { visitedPaths: [...s.visitedPaths, p] }
         })
       },
@@ -149,8 +149,8 @@ export const useGameStore = create<GameState>()(
 
       completeLaunchStep: (id) => {
         set((s) => {
-          if (s.launchReadiness.completionBonusClaimed) return {}
-          if (s.launchReadiness.stepCompletion[id]) return {}
+          if (s.launchReadiness.completionBonusClaimed) return s
+          if (s.launchReadiness.stepCompletion[id]) return s
           return {
             launchReadiness: {
               ...s.launchReadiness,

@@ -1,12 +1,15 @@
+import { useShallow } from 'zustand/react/shallow'
 import { ROBOT_CATALOG, STORY_CHAPTER_DEFS } from '../data/worldPhase8'
 import { useGameStore } from '../store/useGameStore'
 import { isRobotUnlocked } from '../utils/robotUnlock'
 
 export function RobotsPanel() {
-  const snap = useGameStore((s) => ({
-    storyChapters: s.storyChapters,
-    xp: s.xp,
-  }))
+  const snap = useGameStore(
+    useShallow((s) => ({
+      storyChapters: s.storyChapters,
+      xp: s.xp,
+    })),
+  )
   const selected = useGameStore((s) => s.selectedRobotId)
   const selectRobot = useGameStore((s) => s.selectRobot)
 
