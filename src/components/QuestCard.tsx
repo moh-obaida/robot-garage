@@ -9,10 +9,6 @@ function typeLabel(type: QuestDef['type'], mini?: QuestDef['miniGame']) {
       return 'Wires'
     case 'junkyardSearch':
       return 'Search'
-    case 'scrapRacer':
-      return 'Racer'
-    case 'timeTrial':
-      return 'Lap'
     case 'memoryCircuit':
       return 'Memory'
     case 'speedTest':

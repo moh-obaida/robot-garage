@@ -6,21 +6,6 @@ import {
   type ComfortSettings,
   type LaunchReadinessState,
 } from '../data/launchReadiness'
-import {
-  CIRCUIT_CUP_IDS,
-  STORY_CHAPTER_IDS,
-  WORLD_BOSS_IDS,
-  defaultCircuitCupClaimed,
-  defaultStoryChapters,
-  defaultWorldBosses,
-  repairStoryChain,
-  syncBossUnlocksFromChapters,
-  type CircuitCupId,
-  type StoryChapterId,
-  type StoryChapterProgress,
-  type WorldBossId,
-  type WorldBossProgress,
-} from '../data/worldPhase8'
 import { levelFromTotalXp } from './progression'
 
 export type { ComfortSettings, LaunchReadinessState }
@@ -166,10 +151,6 @@ export interface MigratedSnapshot {
   visitedPaths: string[]
   comfort: ComfortSettings
   launchReadiness: LaunchReadinessState
-  storyChapters: Record<StoryChapterId, StoryChapterProgress>
-  factoryFirstBonusClaimed: boolean
-  circuitCupClaimed: Record<CircuitCupId, boolean>
-  worldBosses: Record<WorldBossId, WorldBossProgress>
 }
 
 export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
@@ -192,57 +173,6 @@ export const DEFAULT_SNAPSHOT: MigratedSnapshot = {
   visitedPaths: [],
   comfort: { reducedMotion: false, highContrast: false },
   launchReadiness: { ...DEFAULT_LAUNCH_READINESS },
-  storyChapters: defaultStoryChapters(),
-  factoryFirstBonusClaimed: false,
-  circuitCupClaimed: defaultCircuitCupClaimed(),
-  worldBosses: defaultWorldBosses(),
-}
-
-function mergeStoryChapters(raw: unknown): Record<StoryChapterId, StoryChapterProgress> {
-  const base = defaultStoryChapters()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of STORY_CHAPTER_IDS) {
-    const v = o[id]
-    if (v && typeof v === 'object') {
-      const e = v as Record<string, unknown>
-      base[id] = {
-        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : base[id]!.unlocked,
-        completedOnce:
-          typeof e.completedOnce === 'boolean' ? e.completedOnce : base[id]!.completedOnce,
-      }
-    }
-  }
-  return repairStoryChain(base)
-}
-
-function mergeCircuitCupClaimed(raw: unknown): Record<CircuitCupId, boolean> {
-  const base = defaultCircuitCupClaimed()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of CIRCUIT_CUP_IDS) {
-    const v = o[id]
-    if (typeof v === 'boolean') base[id] = v
-  }
-  return base
-}
-
-function mergeWorldBosses(raw: unknown): Record<WorldBossId, WorldBossProgress> {
-  const base = defaultWorldBosses()
-  if (!raw || typeof raw !== 'object') return base
-  const o = raw as Record<string, unknown>
-  for (const id of WORLD_BOSS_IDS) {
-    const v = o[id]
-    if (v && typeof v === 'object') {
-      const e = v as Record<string, unknown>
-      base[id] = {
-        unlocked: typeof e.unlocked === 'boolean' ? e.unlocked : base[id]!.unlocked,
-        defeatedOnce:
-          typeof e.defeatedOnce === 'boolean' ? e.defeatedOnce : base[id]!.defeatedOnce,
-      }
-    }
-  }
-  return base
 }
 
 export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
@@ -292,17 +222,6 @@ export function migrateUnknownToSnapshot(raw: unknown): MigratedSnapshot {
 
   base.comfort = mergeComfort(state.comfort)
   base.launchReadiness = mergeLaunchReadiness(state.launchReadiness)
-
-  base.storyChapters = mergeStoryChapters(state.storyChapters)
-  base.factoryFirstBonusClaimed =
-    typeof state.factoryFirstBonusClaimed === 'boolean'
-      ? state.factoryFirstBonusClaimed
-      : false
-  base.circuitCupClaimed = mergeCircuitCupClaimed(state.circuitCupClaimed)
-  base.worldBosses = syncBossUnlocksFromChapters(
-    base.storyChapters,
-    mergeWorldBosses(state.worldBosses),
-  )
 
   if (!base.unlockedColors.includes(base.paintColorId)) {
     base.paintColorId = base.unlockedColors[0] ?? 'blue'
