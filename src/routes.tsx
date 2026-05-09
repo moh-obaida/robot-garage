@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './App'
+import { RouteErrorFallback } from './components/RouteErrorFallback'
 import { Dashboard } from './views/Dashboard'
 import { Garage } from './views/Garage'
 import { Upgrades } from './views/Upgrades'
@@ -9,11 +10,13 @@ import { Arcade } from './views/Arcade'
 import { Arena } from './views/Arena'
 import { Shop } from './views/Shop'
 import { Vehicles } from './views/Vehicles'
+import { World } from './views/World'
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppLayout />,
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'garage', element: <Garage /> },
@@ -24,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'shop', element: <Shop /> },
       { path: 'vehicles', element: <Vehicles /> },
       { path: 'arcade', element: <Arcade /> },
+      { path: 'world', element: <World /> },
     ],
   },
 ])

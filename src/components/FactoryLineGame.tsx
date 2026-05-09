@@ -1,153 +1,139 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react'
 
-const STAMPS_NEEDED = 3;
-const BAND = { left: 0.36, width: 0.28 };
+const STAMPS_NEEDED = 3
+const BAND = { left: 0.36, width: 0.28 }
 
 export function FactoryLineGame({
   disabled,
   onSuccessRun,
 }: {
-  disabled: boolean;
-  onSuccessRun: () => void;
+  disabled: boolean
+  onSuccessRun: () => void
 }) {
-  const [running, setRunning] = useState(false);
-  const [marker, setMarker] = useState(0);
-  const dirRef = useRef(1);
-  const [stamps, setStamps] = useState(0);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const finishedRef = useRef(false);
+  const [running, setRunning] = useState(false)
+  const [marker, setMarker] = useState(0)
+  const dirRef = useRef(1)
+  const [stamps, setStamps] = useState(0)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const finishedRef = useRef(false)
 
   useEffect(() => {
-    if (!running) return;
-    const speed = 0.024;
-    let raf = 0;
+    if (!running) return
+    const speed = 0.024
+    let raf = 0
     const tick = () => {
       setMarker((m) => {
-        let n = m + speed * dirRef.current;
+        let n = m + speed * dirRef.current
         if (n >= 1) {
-          n = 1;
-          dirRef.current = -1;
+          n = 1
+          dirRef.current = -1
         } else if (n <= 0) {
-          n = 0;
-          dirRef.current = 1;
+          n = 0
+          dirRef.current = 1
         }
-        return n;
-      });
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [running]);
+        return n
+      })
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [running])
 
   const resetLine = () => {
-    finishedRef.current = false;
-    setRunning(false);
-    setMarker(0);
-    dirRef.current = 1;
-    setStamps(0);
-    setFeedback(null);
-  };
+    finishedRef.current = false
+    setRunning(false)
+    setMarker(0)
+    dirRef.current = 1
+    setStamps(0)
+    setFeedback(null)
+  }
 
   const startLine = () => {
-    if (disabled) return;
-    finishedRef.current = false;
-    setStamps(0);
-    setMarker(0);
-    dirRef.current = 1;
-    setFeedback('Stamp when the ram sits in the green slot — three clean hits.');
-    setRunning(true);
-  };
+    if (disabled) return
+    finishedRef.current = false
+    setStamps(0)
+    setMarker(0)
+    dirRef.current = 1
+    setFeedback('Stamp when the ram sits in the green slot — three clean hits.')
+    setRunning(true)
+  }
 
   const stamp = () => {
-    if (!running || finishedRef.current || disabled) return;
-    const left = BAND.left;
-    const right = left + BAND.width;
+    if (!running || finishedRef.current || disabled) return
+    const left = BAND.left
+    const right = left + BAND.width
     if (marker >= left && marker <= right) {
-      const next = stamps + 1;
-      setStamps(next);
+      const next = stamps + 1
+      setStamps(next)
       if (next >= STAMPS_NEEDED) {
-        finishedRef.current = true;
-        setRunning(false);
-        setFeedback('Line certifies — payout queued.');
-        onSuccessRun();
+        finishedRef.current = true
+        setRunning(false)
+        setFeedback('Line certifies — payout queued.')
+        onSuccessRun()
       } else {
-        setFeedback(`Solid hit ${next}/${STAMPS_NEEDED} — keep the rhythm.`);
+        setFeedback(`Solid hit ${next}/${STAMPS_NEEDED} — keep the rhythm.`)
       }
     } else {
-      setRunning(false);
-      setStamps(0);
-      setFeedback('Off-center stamp — reset the line and pace the ram.');
+      setRunning(false)
+      setStamps(0)
+      setFeedback('Off-center stamp — reset the line and pace the ram.')
     }
-  };
+  }
 
   return (
     <div>
-      <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--rg-muted)' }}>
-        Run the hydraulic stamp press. Three clean hits pays scrap and XP. First successful
-        batch of the save pays a fatter bonus (once only).
+      <p className="text-sm text-slate-400">
+        Run the hydraulic stamp press. First successful batch pays extra once per save; later runs pay
+        a smaller stipend.
       </p>
       {feedback ? (
-        <div className="rg-feedback info" style={{ marginBottom: '0.75rem' }}>
+        <p className="mt-3 rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-3 py-2 text-sm text-cyan-100">
           {feedback}
-        </div>
+        </p>
       ) : null}
       <div
-        style={{
-          position: 'relative',
-          height: 52,
-          borderRadius: 8,
-          background: '#21262d',
-          border: '2px solid var(--rg-panel-border)',
-          overflow: 'hidden',
-        }}
+        className="relative mt-4 h-[52px] overflow-hidden rounded-lg border-2 border-slate-600 bg-slate-900"
+        role="presentation"
       >
         <div
-          style={{
-            position: 'absolute',
-            left: `${BAND.left * 100}%`,
-            width: `${BAND.width * 100}%`,
-            top: 4,
-            bottom: 4,
-            background: 'var(--rg-green-dim)',
-            border: '1px solid var(--rg-green)',
-            borderRadius: 4,
-          }}
+          className="absolute bottom-1 top-1 rounded border border-emerald-500/60 bg-emerald-900/40"
+          style={{ left: `${BAND.left * 100}%`, width: `${BAND.width * 100}%` }}
         />
         <div
-          style={{
-            position: 'absolute',
-            left: `calc(${marker * 100}% - 5px)`,
-            top: 6,
-            width: 10,
-            height: 40,
-            background: 'var(--rg-yellow)',
-            borderRadius: 2,
-            boxShadow: '0 0 10px rgba(240,193,75,0.55)',
-          }}
+          className="absolute bottom-1 top-1 w-2.5 rounded-sm bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+          style={{ left: `calc(${marker * 100}% - 5px)` }}
         />
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.85rem' }}>
+      <div className="mt-4 flex flex-wrap gap-2">
         {!running ? (
           <button
             type="button"
-            className="rg-btn rg-btn-primary"
             disabled={disabled}
             onClick={startLine}
+            className="min-h-[44px] rounded-xl bg-amber-400 px-4 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
           >
             Start press run
           </button>
         ) : (
-          <button type="button" className="rg-btn rg-btn-success" onClick={stamp}>
+          <button
+            type="button"
+            onClick={stamp}
+            className="min-h-[44px] rounded-xl bg-emerald-500 px-4 text-sm font-bold text-slate-950 hover:bg-emerald-400"
+          >
             Stamp
           </button>
         )}
-        <button type="button" className="rg-btn rg-btn-ghost" onClick={resetLine}>
+        <button
+          type="button"
+          onClick={resetLine}
+          className="min-h-[44px] rounded-xl border border-slate-600 px-4 text-sm font-bold text-slate-200 hover:bg-slate-900"
+        >
           Reset
         </button>
       </div>
-      <p style={{ fontSize: '0.8rem', color: 'var(--rg-muted)', margin: '0.5rem 0 0' }}>
+      <p className="mt-2 text-xs text-slate-500">
         Hits this run: {stamps} / {STAMPS_NEEDED}
       </p>
     </div>
-  );
+  )
 }

@@ -9,6 +9,36 @@ import type { MiniGameResult } from '../types/quests'
 import { canStartQuest, getQuestById } from '../utils/questEngine'
 import { levelFromTotalXp } from '../utils/progression'
 import {
+  type ComfortSettings,
+  allLaunchStepsComplete,
+  LAUNCH_CHECKLIST_BONUS_SCRAP,
+  LAUNCH_CHECKLIST_BONUS_XP,
+  launchChecklistComplete,
+  type LaunchStepId,
+} from '../data/launchReadiness'
+import { PERSIST_STORE_VERSION } from '../config/persistVersion'
+import {
+  CIRCUIT_CUPS,
+  FACTORY_FIRST_SCRAP,
+  FACTORY_FIRST_XP,
+  FACTORY_REPEAT_SCRAP,
+  FACTORY_REPEAT_XP,
+  STORY_CHAPTER_DEFS,
+  STORY_CHAPTER_IDS,
+  WORLD_BOSSES,
+  CIRCUIT_CUP_IDS,
+  WORLD_BOSS_IDS,
+  defaultCircuitCupClaimed,
+  defaultStoryChapters,
+  defaultWorldBosses,
+  repairStoryChain,
+  syncBossUnlocksFromChapters,
+  type CircuitCupId,
+  type StoryChapterId,
+  type WorldBossId,
+} from '../data/worldPhase8'
+import { isRobotUnlocked } from '../utils/robotUnlock'
+import {
   DEFAULT_SNAPSHOT,
   STORAGE_V1,
   STORAGE_V2,
@@ -35,6 +65,14 @@ interface GameState extends MigratedSnapshot {
   resetProgress: () => void
   selectRobot: (robotId: string) => void
   syncColorUnlocks: () => void
+  recordVisit: (pathname: string) => void
+  setComfort: (patch: Partial<ComfortSettings>) => void
+  completeLaunchStep: (id: LaunchStepId) => void
+  claimLaunchChecklistBonus: () => { ok: boolean; message?: string }
+  completeStoryChapter: (id: StoryChapterId) => { ok: boolean; message?: string }
+  claimFactoryRunSuccess: () => { ok: boolean; message?: string }
+  claimCircuitCup: (id: CircuitCupId) => { ok: boolean; message?: string }
+  claimWorldBossVictory: (id: WorldBossId) => { ok: boolean; message?: string }
 }
 
 function mergeAchievementUnlocks(s: MigratedSnapshot): string[] {
@@ -75,10 +113,14 @@ export function collectColorUnlocks(s: MigratedSnapshot): string[] {
 
 function seed(): MigratedSnapshot & { levelUpToast: null } {
   const snap = loadInitialSnapshot()
+  const selectedRobotId = isRobotUnlocked(snap.selectedRobotId, snap)
+    ? snap.selectedRobotId
+    : 'bolt-x'
+  const next = { ...snap, selectedRobotId }
   return {
-    ...snap,
-    unlockedColors: collectColorUnlocks(snap),
-    level: levelFromTotalXp(snap.xp),
+    ...next,
+    unlockedColors: collectColorUnlocks(next),
+    level: levelFromTotalXp(next.xp),
     levelUpToast: null,
   }
 }
@@ -89,6 +131,258 @@ export const useGameStore = create<GameState>()(
       ...seed(),
 
       setLevelUpToast: (msg) => set({ levelUpToast: msg }),
+
+      recordVisit: (pathname) => {
+        const raw = pathname?.trim() || '/'
+        const p = raw.startsWith('/') ? raw : `/${raw}`
+        set((s) => {
+          if (s.visitedPaths.includes(p)) return s
+          return { visitedPaths: [...s.visitedPaths, p] }
+        })
+      },
+
+      setComfort: (patch) => {
+        set((s) => ({
+          comfort: { ...s.comfort, ...patch },
+        }))
+      },
+
+      completeLaunchStep: (id) => {
+        set((s) => {
+          if (s.launchReadiness.completionBonusClaimed) return s
+          if (s.launchReadiness.stepCompletion[id]) return s
+          return {
+            launchReadiness: {
+              ...s.launchReadiness,
+              stepCompletion: {
+                ...s.launchReadiness.stepCompletion,
+                [id]: new Date().toISOString(),
+              },
+            },
+          }
+        })
+      },
+
+      completeStoryChapter: (id) => {
+        const s = get()
+        const row = s.storyChapters[id]
+        if (!row?.unlocked) return { ok: false, message: 'Chapter locked.' }
+        if (row.completedOnce) return { ok: false, message: 'Already cleared.' }
+        const idx = STORY_CHAPTER_IDS.indexOf(id)
+        if (idx > 0) {
+          const prev = STORY_CHAPTER_IDS[idx - 1]!
+          if (!s.storyChapters[prev]?.completedOnce) {
+            return { ok: false, message: 'Finish the prior chapter first.' }
+          }
+        }
+        const def = STORY_CHAPTER_DEFS[id]
+        let chapters = {
+          ...s.storyChapters,
+          [id]: { ...row, completedOnce: true, unlocked: true },
+        }
+        if (idx < STORY_CHAPTER_IDS.length - 1) {
+          const nxt = STORY_CHAPTER_IDS[idx + 1]!
+          chapters = {
+            ...chapters,
+            [nxt]: { ...chapters[nxt]!, unlocked: true },
+          }
+        }
+        chapters = repairStoryChain(chapters)
+        const bosses = syncBossUnlocksFromChapters(chapters, s.worldBosses)
+        const prevLv = levelFromTotalXp(s.xp)
+        const xp = s.xp + def.rewardXp
+        const scrap = s.scrap + def.rewardScrap
+        const nextLv = levelFromTotalXp(xp)
+        const partial: MigratedSnapshot = {
+          ...s,
+          scrap,
+          xp,
+          level: nextLv,
+          storyChapters: chapters,
+          worldBosses: bosses,
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          storyChapters: chapters,
+          worldBosses: bosses,
+          unlockedColors,
+          achievementUnlocks,
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast,
+        })
+        return { ok: true }
+      },
+
+      claimFactoryRunSuccess: () => {
+        const s = get()
+        if (!s.storyChapters['night-haul']?.completedOnce) {
+          return { ok: false, message: 'Clear Night Haul first.' }
+        }
+        const repeat = s.factoryFirstBonusClaimed
+        const scrapAdd = repeat ? FACTORY_REPEAT_SCRAP : FACTORY_FIRST_SCRAP
+        const xpAdd = repeat ? FACTORY_REPEAT_XP : FACTORY_FIRST_XP
+        const prevLv = levelFromTotalXp(s.xp)
+        const scrap = s.scrap + scrapAdd
+        const xp = s.xp + xpAdd
+        const nextLv = levelFromTotalXp(xp)
+        const partial: MigratedSnapshot = {
+          ...s,
+          scrap,
+          xp,
+          level: nextLv,
+          factoryFirstBonusClaimed: true,
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          factoryFirstBonusClaimed: true,
+          unlockedColors,
+          achievementUnlocks,
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast,
+        })
+        return { ok: true }
+      },
+
+      claimCircuitCup: (cupId) => {
+        const s = get()
+        if (s.circuitCupClaimed[cupId]) {
+          return { ok: false, message: 'Cup reward already claimed.' }
+        }
+        const spec = CIRCUIT_CUPS[cupId]
+        if (s.arenaWins < spec.minArenaWins) {
+          return {
+            ok: false,
+            message: `Need ${spec.minArenaWins} arena win(s) for this cup.`,
+          }
+        }
+        const prevLv = levelFromTotalXp(s.xp)
+        const scrap = s.scrap + spec.scrap
+        const xp = s.xp + spec.xp
+        const nextLv = levelFromTotalXp(xp)
+        const circuitCupClaimed = { ...s.circuitCupClaimed, [cupId]: true }
+        const partial: MigratedSnapshot = {
+          ...s,
+          scrap,
+          xp,
+          level: nextLv,
+          circuitCupClaimed,
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          circuitCupClaimed,
+          unlockedColors,
+          achievementUnlocks,
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast,
+        })
+        return { ok: true }
+      },
+
+      claimWorldBossVictory: (bossId) => {
+        const s = get()
+        const prog = s.worldBosses[bossId]
+        const def = WORLD_BOSSES[bossId]
+        if (!prog?.unlocked) return { ok: false, message: 'Boss locked.' }
+        if (prog.defeatedOnce) return { ok: false, message: 'Already defeated.' }
+        const prevLv = levelFromTotalXp(s.xp)
+        const scrap = s.scrap + def.rewardScrap
+        const xp = s.xp + def.rewardXp
+        const nextLv = levelFromTotalXp(xp)
+        const worldBosses = {
+          ...s.worldBosses,
+          [bossId]: { ...prog, defeatedOnce: true },
+        }
+        const partial: MigratedSnapshot = {
+          ...s,
+          scrap,
+          xp,
+          level: nextLv,
+          worldBosses,
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          worldBosses,
+          unlockedColors,
+          achievementUnlocks,
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast,
+        })
+        return { ok: true }
+      },
+
+      claimLaunchChecklistBonus: () => {
+        const state = get()
+        if (state.launchReadiness.completionBonusClaimed) {
+          return { ok: false, message: 'Launch bonus already banked.' }
+        }
+        const slice = {
+          completedMissions: state.completedMissions,
+          upgradeLevels: state.upgradeLevels,
+          arenaWins: state.arenaWins,
+          visitedPaths: state.visitedPaths,
+        }
+        if (!launchChecklistComplete(slice)) {
+          return { ok: false, message: 'Complete every launch task to collect.' }
+        }
+        if (!allLaunchStepsComplete(state.launchReadiness)) {
+          return { ok: false, message: 'Finish the pilot sign-off steps first.' }
+        }
+        const prevLv = levelFromTotalXp(state.xp)
+        const xp = state.xp + LAUNCH_CHECKLIST_BONUS_XP
+        const scrap = state.scrap + LAUNCH_CHECKLIST_BONUS_SCRAP
+        const nextLv = levelFromTotalXp(xp)
+        const partial: MigratedSnapshot = {
+          ...state,
+          scrap,
+          xp,
+          level: nextLv,
+          launchReadiness: { ...state.launchReadiness, completionBonusClaimed: true },
+        }
+        const unlockedColors = collectColorUnlocks(partial)
+        const achievementUnlocks = mergeAchievementUnlocks({
+          ...partial,
+          unlockedColors,
+        })
+        set({
+          scrap,
+          xp,
+          level: nextLv,
+          unlockedColors,
+          achievementUnlocks,
+          launchReadiness: { ...state.launchReadiness, completionBonusClaimed: true },
+          levelUpToast:
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : state.levelUpToast,
+        })
+        return { ok: true }
+      },
 
       syncColorUnlocks: () => {
         const s = get()
@@ -101,6 +395,8 @@ export const useGameStore = create<GameState>()(
       },
 
       selectRobot: (robotId) => {
+        const s = get()
+        if (!isRobotUnlocked(robotId, s)) return
         set({ selectedRobotId: robotId })
       },
 
@@ -367,7 +663,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: STORAGE_V2,
-      version: 4,
+      version: PERSIST_STORE_VERSION,
       partialize: (s) => ({
         scrap: s.scrap,
         xp: s.xp,
@@ -385,9 +681,50 @@ export const useGameStore = create<GameState>()(
         defeatedOpponents: s.defeatedOpponents,
         unlockedBadges: s.unlockedBadges,
         achievementUnlocks: s.achievementUnlocks,
+        visitedPaths: s.visitedPaths,
+        comfort: s.comfort,
+        launchReadiness: s.launchReadiness,
+        storyChapters: s.storyChapters,
+        factoryFirstBonusClaimed: s.factoryFirstBonusClaimed,
+        circuitCupClaimed: s.circuitCupClaimed,
+        worldBosses: s.worldBosses,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<MigratedSnapshot>
+        const cur = current as MigratedSnapshot
+        const storyChapters = repairStoryChain({ ...defaultStoryChapters() })
+        for (const id of STORY_CHAPTER_IDS) {
+          storyChapters[id] = {
+            ...DEFAULT_SNAPSHOT.storyChapters[id]!,
+            ...cur.storyChapters?.[id],
+            ...(p.storyChapters?.[id] ?? {}),
+          }
+        }
+        const storyChaptersFixed = repairStoryChain(storyChapters)
+
+        let worldBosses = { ...defaultWorldBosses() }
+        for (const id of WORLD_BOSS_IDS) {
+          worldBosses[id] = {
+            ...DEFAULT_SNAPSHOT.worldBosses[id]!,
+            ...cur.worldBosses?.[id],
+            ...(p.worldBosses?.[id] ?? {}),
+          }
+        }
+        worldBosses = syncBossUnlocksFromChapters(storyChaptersFixed, worldBosses)
+
+        const circuitCupClaimed = { ...defaultCircuitCupClaimed() }
+        for (const id of CIRCUIT_CUP_IDS) {
+          circuitCupClaimed[id] =
+            typeof p.circuitCupClaimed?.[id] === 'boolean'
+              ? p.circuitCupClaimed[id]!
+              : cur.circuitCupClaimed[id]
+        }
+
+        const factoryFirstBonusClaimed =
+          typeof p.factoryFirstBonusClaimed === 'boolean'
+            ? p.factoryFirstBonusClaimed
+            : cur.factoryFirstBonusClaimed
+
         const merged: MigratedSnapshot = {
           ...DEFAULT_SNAPSHOT,
           ...current,
@@ -398,21 +735,51 @@ export const useGameStore = create<GameState>()(
           },
           questProgress: {
             ...DEFAULT_SNAPSHOT.questProgress,
-            ...((current as MigratedSnapshot).questProgress ?? {}),
+            ...(cur.questProgress ?? {}),
             ...(p.questProgress ?? {}),
+          },
+          visitedPaths: [
+            ...new Set([
+              ...DEFAULT_SNAPSHOT.visitedPaths,
+              ...(cur.visitedPaths ?? []),
+              ...(p.visitedPaths ?? []),
+            ]),
+          ],
+          comfort: {
+            ...DEFAULT_SNAPSHOT.comfort,
+            ...(cur.comfort ?? {}),
+            ...(p.comfort ?? {}),
+          },
+          launchReadiness: {
+            ...DEFAULT_SNAPSHOT.launchReadiness,
+            ...(cur.launchReadiness ?? {}),
+            ...(p.launchReadiness ?? {}),
+            stepCompletion: {
+              ...DEFAULT_SNAPSHOT.launchReadiness.stepCompletion,
+              ...(cur.launchReadiness?.stepCompletion ?? {}),
+              ...(p.launchReadiness?.stepCompletion ?? {}),
+            },
           },
           achievementUnlocks: [
             ...new Set([
               ...(DEFAULT_SNAPSHOT.achievementUnlocks ?? []),
-              ...((current as MigratedSnapshot).achievementUnlocks ?? []),
+              ...(cur.achievementUnlocks ?? []),
               ...(p.achievementUnlocks ?? []),
             ]),
           ],
+          storyChapters: storyChaptersFixed,
+          worldBosses,
+          circuitCupClaimed,
+          factoryFirstBonusClaimed,
         }
         merged.level = levelFromTotalXp(merged.xp)
         merged.unlockedColors = collectColorUnlocks(merged)
         merged.achievementUnlocks = mergeAchievementUnlocks(merged)
-        return { ...current, ...merged, levelUpToast: null }
+        let selectedRobotId = merged.selectedRobotId
+        if (!isRobotUnlocked(selectedRobotId, merged)) {
+          selectedRobotId = 'bolt-x'
+        }
+        return { ...current, ...merged, selectedRobotId, levelUpToast: null }
       },
     },
   ),
