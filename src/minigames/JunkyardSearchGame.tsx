@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { JunkyardDifficulty } from '../types/quests'
-import type { MiniGameResult } from '../types/quests'
+import type { JunkyardDifficulty, MiniGameResult } from '../types/quests'
 
 type Cell = 'part' | 'junk' | 'spark' | 'empty'
 

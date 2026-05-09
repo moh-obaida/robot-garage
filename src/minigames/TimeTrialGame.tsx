@@ -13,6 +13,10 @@ function shuffledOrder(len: number): number[] {
   return arr
 }
 
+function deadlineFromNow(ms: number): number {
+  return Date.now() + ms
+}
+
 export function TimeTrialGame({ onFinish }: { onFinish: (r: MiniGameResult) => void }) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [order, setOrder] = useState<number[]>([])
@@ -42,9 +46,11 @@ export function TimeTrialGame({ onFinish }: { onFinish: (r: MiniGameResult) => v
   useEffect(() => {
     if (phase !== 'mem' || order.length === 0) return
     if (flashIdx >= order.length) {
-      setPhase('race')
-      setDeadline(Date.now() + timeTrialConfig.totalMs)
-      return
+      const id = window.setTimeout(() => {
+        setPhase('race')
+        setDeadline(deadlineFromNow(timeTrialConfig.totalMs))
+      }, 0)
+      return () => window.clearTimeout(id)
     }
     const id = window.setTimeout(() => setFlashIdx((i) => i + 1), timeTrialConfig.memorizeMs)
     return () => window.clearTimeout(id)
@@ -59,7 +65,7 @@ export function TimeTrialGame({ onFinish }: { onFinish: (r: MiniGameResult) => v
     const id = window.setTimeout(() => {
       setPhase('lost')
       safeFinish({ success: false, score: stepRef.current })
-    }, Math.max(0, deadline - Date.now()))
+    }, Math.max(0, deadline - deadlineFromNow(0)))
     return () => window.clearTimeout(id)
   }, [phase, deadline, safeFinish])
 
@@ -73,9 +79,12 @@ export function TimeTrialGame({ onFinish }: { onFinish: (r: MiniGameResult) => v
     }
     const next = step + 1
     if (next >= order.length) {
-      const msLeft = deadline ? Math.max(0, deadline - Date.now()) : 0
-      setPhase('won')
-      safeFinish({ success: true, score: 130 + Math.floor(msLeft / 100) })
+      const endDeadline = deadline
+      queueMicrotask(() => {
+        const msLeft = endDeadline ? Math.max(0, endDeadline - deadlineFromNow(0)) : 0
+        setPhase('won')
+        safeFinish({ success: true, score: 130 + Math.floor(msLeft / 100) })
+      })
       return
     }
     setStep(next)

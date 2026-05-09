@@ -2,7 +2,8 @@ import { ACHIEVEMENTS } from '../data/achievements'
 import { useGameStore } from '../store/useGameStore'
 
 export function AchievementsStrip() {
-  const unlocked = useGameStore((s) => new Set(s.achievementUnlocks))
+  const ids = useGameStore((s) => s.achievementUnlocks)
+  const unlocked = new Set(ids)
 
   return (
     <div

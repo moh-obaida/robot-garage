@@ -1,18 +1,17 @@
+import { useShallow } from 'zustand/react/shallow'
+import { ROBOT_CATALOG, STORY_CHAPTER_DEFS } from '../data/worldPhase8'
 import { useGameStore } from '../store/useGameStore'
-import { levelFromTotalXp } from '../utils/progression'
-
-const BOTS = [
-  { id: 'bolt-x', name: 'Bolt-X', type: 'Starter', color: '#3b82f6', needLv: 1 },
-  { id: 'ember-9', name: 'Ember-9', type: 'Attack', color: '#ef4444', needLv: 2 },
-  { id: 'zip-z', name: 'Zip-Z', type: 'Speed', color: '#eab308', needLv: 3 },
-  { id: 'shade-v', name: 'Shade-V', type: 'Rival', color: '#a855f7', needLv: 5 },
-]
+import { isRobotUnlocked } from '../utils/robotUnlock'
 
 export function RobotsPanel() {
-  const xp = useGameStore((s) => s.xp)
+  const snap = useGameStore(
+    useShallow((s) => ({
+      storyChapters: s.storyChapters,
+      xp: s.xp,
+    })),
+  )
   const selected = useGameStore((s) => s.selectedRobotId)
   const selectRobot = useGameStore((s) => s.selectRobot)
-  const lv = levelFromTotalXp(xp)
 
   return (
     <div className="rounded-2xl border border-slate-700/80 bg-slate-950/70 p-3 shadow-inner">
@@ -20,9 +19,19 @@ export function RobotsPanel() {
         Robots
       </h3>
       <ul className="mt-2 space-y-2">
-        {BOTS.map((b) => {
-          const ok = lv >= b.needLv
+        {ROBOT_CATALOG.map((b) => {
+          const ok = isRobotUnlocked(b.id, snap)
           const active = selected === b.id
+          const hint =
+            b.unlock.kind === 'starter'
+              ? null
+              : b.unlock.kind === 'chapter'
+                ? `After “${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}”`
+                : b.unlock.kind === 'level'
+                  ? `Pilot level ${b.unlock.minLevel}+`
+                  : b.unlock.kind === 'chapter_level'
+                    ? `“${STORY_CHAPTER_DEFS[b.unlock.chapterId].title}” & Lv ${b.unlock.minLevel}`
+                    : null
           return (
             <li key={b.id}>
               <button
@@ -48,7 +57,9 @@ export function RobotsPanel() {
                 <div>
                   <p className="font-bold text-slate-100">{b.name}</p>
                   <p className="text-[10px] text-slate-500">{b.type}</p>
-                  {!ok ? <p className="text-[10px] text-amber-200/80">Lv {b.needLv}</p> : null}
+                  {!ok && hint ? (
+                    <p className="text-[10px] text-amber-200/80">{hint}</p>
+                  ) : null}
                 </div>
               </button>
             </li>
