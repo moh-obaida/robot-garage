@@ -7,7 +7,7 @@ const NAV: { to: string; label: string }[] = [
   { to: ROUTES.garage, label: 'Garage' },
   { to: ROUTES.missions, label: 'Missions' },
   { to: ROUTES.arena, label: 'PvP Arena' },
-  { to: ROUTES.upgrades, label: 'Shop' },
+  { to: ROUTES.upgrade, label: 'Shop' },
   { to: ROUTES.colors, label: 'Colors' },
 ]
 

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { OPPONENTS } from '../data/opponents'
 import { getColorById } from '../data/colors'
 import { Panel } from '../components/Panel'
@@ -59,13 +60,15 @@ function makeCombatant(
 }
 
 export function Arena() {
-  const snapshot = useGameStore((s) => ({
-    robotName: s.robotName,
-    paintColorId: s.paintColorId,
-    upgradeLevels: s.upgradeLevels,
-    completedMissions: s.completedMissions,
-  }))
-  const recordArenaResult = useGameStore((s) => s.recordArenaResult)
+  const snapshot = useGameStore(
+    useShallow((s) => ({
+      robotName: s.robotName,
+      paintColorId: s.paintColorId,
+      upgradeLevels: s.upgradeLevels,
+      completedMissions: s.completedMissions,
+    })),
+  )
+  const applyArenaRewards = useGameStore((s) => s.applyArenaRewards)
 
   const [phase, setPhase] = useState<Phase>('pick')
   const [opponent, setOpponent] = useState<ArenaOpponent | null>(null)
@@ -89,7 +92,7 @@ export function Arena() {
       playerBase.defense,
       playerBase.speed,
     )
-    const e = makeCombatant(opp.callsign, opp.maxHp, opp.attack, opp.defense, opp.speed)
+    const e = makeCombatant(opp.callsign, opp.hp, opp.power, opp.armor, opp.speed)
     const first = initiative(p.speed, e.speed)
     setOpponent(opp)
     setPlayer(p)
@@ -108,10 +111,10 @@ export function Arena() {
       if (!opponent) return
       setPhase('end')
       setResult(won ? 'win' : 'loss')
-      recordArenaResult(won, won ? opponent.winScrap : 0)
-      pushLog(won ? `Victory! +${opponent.winScrap} scrap.` : 'Defeat — scrap withheld.')
+      applyArenaRewards(won, opponent.id)
+      pushLog(won ? `Victory! +${opponent.rewardScrap} scrap.` : 'Defeat — scrap withheld.')
     },
-    [opponent, pushLog, recordArenaResult],
+    [opponent, pushLog, applyArenaRewards],
   )
 
   const applyEnemyTurn = useCallback(
@@ -200,7 +203,7 @@ export function Arena() {
     window.setTimeout(() => applyEnemyTurn(p, e), 450)
   }
 
-  const pc = getColorById(playerBase.color)
+  const pc = getColorById(playerBase.colorId)
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -216,9 +219,9 @@ export function Arena() {
                   {o.callsign}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500">
-                  HP {o.maxHp} · ATK {o.attack} · DEF {o.defense} · SPD {o.speed}
+                  HP {o.hp} · ATK {o.power} · DEF {o.armor} · SPD {o.speed}
                 </p>
-                <p className="mt-2 text-sm text-amber-200/90">Win: +{o.winScrap} scrap</p>
+                <p className="mt-2 text-sm text-amber-200/90">Win: +{o.rewardScrap} scrap</p>
                 <button
                   type="button"
                   onClick={() => startMatch(o)}
@@ -278,7 +281,7 @@ export function Arena() {
             </p>
             <p className="mt-2 text-slate-400">
               {result === 'win' && opponent
-                ? `Payout: ${opponent.winScrap} scrap.`
+                ? `Payout: ${opponent.rewardScrap} scrap.`
                 : 'Train in upgrades and try another callsign.'}
             </p>
             <button

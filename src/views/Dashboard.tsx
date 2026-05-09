@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MISSIONS } from '../data/missions'
+import { QUESTS } from '../data/quests'
 import { Panel } from '../components/Panel'
 import { RobotFigure } from '../components/RobotFigure'
 import { selectRobotStats, useGameStore } from '../store/useGameStore'
@@ -12,7 +12,7 @@ export function Dashboard() {
   const upgradeLevels = useGameStore((s) => s.upgradeLevels)
   const stats = selectRobotStats(upgradeLevels)
 
-  const missionPct = Math.round((completed.length / MISSIONS.length) * 100)
+  const missionPct = Math.round((completed.length / QUESTS.length) * 100)
 
   const tiles: { title: string; desc: string; to: string; accent: string }[] = [
     {
@@ -24,7 +24,7 @@ export function Dashboard() {
     {
       title: 'Shop',
       desc: 'Spend scrap on chassis, weapons, and gyros.',
-      to: ROUTES.upgrades,
+      to: ROUTES.upgrade,
       accent: 'from-fuchsia-500/20 to-transparent',
     },
     {
@@ -64,7 +64,7 @@ export function Dashboard() {
               <div className="mb-1 flex justify-between text-xs text-slate-400">
                 <span>Campaign progress</span>
                 <span>
-                  {completed.length}/{MISSIONS.length} ops
+                  {completed.length}/{QUESTS.length} ops
                 </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-800">

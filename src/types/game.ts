@@ -2,49 +2,67 @@
 export const ROUTES = {
   play: '/',
   garage: '/garage',
-  upgrades: '/upgrades',
   missions: '/missions',
+  upgrade: '/upgrades',
   colors: '/colors',
   arena: '/arena',
+  shop: '/shop',
 } as const
 
-export type UpgradeId = 'chassis' | 'actuators' | 'plating' | 'gyros'
+export type UpgradeId = 'head' | 'arms' | 'body' | 'legs' | 'weapon' | 'core'
 
-export interface RobotStats {
-  maxHp: number
-  attack: number
-  defense: number
+export interface CombatStats {
+  power: number
+  armor: number
   speed: number
-}
-
-export interface MissionDef {
-  id: string
-  name: string
-  description: string
-  rewardScrap: number
-  /** Mission ids that must be completed first */
-  requires: string[]
-  /** Color id unlocked on first completion (in addition to scrap) */
-  unlockColorId?: string
+  energy: number
+  hp: number
 }
 
 export interface ColorDef {
   id: string
   name: string
   hex: string
-  /** Scrap cost; 0 = default or mission-only */
+  /** Scrap cost; 0 = mission / condition only */
   scrapCost: number
-  /** If set, must complete this mission (once) to allow purchase or use */
   requiresMissionId?: string
+  requiresPvpWins?: number
+  requiresDefeatOpponentId?: string
+  requiresAllMissions?: boolean
   starter?: boolean
+  comingSoon?: boolean
 }
 
 export interface ArenaOpponent {
   id: string
   callsign: string
-  maxHp: number
-  attack: number
-  defense: number
+  requiredLevel: number
+  difficulty: string
+  colorId: string
+  power: number
+  armor: number
   speed: number
-  winScrap: number
+  energy: number
+  hp: number
+  rewardScrap: number
+  rewardXp: number
+  rewardTrophies: number
+  unlockColorId?: string
+  unlockBadgeId?: string
+}
+
+export interface CharacterDef {
+  id: string
+  name: string
+  role: string
+  unlocked: boolean
+}
+
+export interface RobotCatalogEntry {
+  id: string
+  callsign: string
+  type: string
+  colorId: string
+  locked: boolean
+  requiredLevel?: number
 }

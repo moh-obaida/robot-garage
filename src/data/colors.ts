@@ -1,13 +1,60 @@
 import type { ColorDef } from '../types/game'
 
 export const COLORS: ColorDef[] = [
-  { id: 'cyan', name: 'Neon Cyan', hex: '#22d3ee', scrapCost: 0, starter: true },
-  { id: 'slate', name: 'Shadow Slate', hex: '#94a3b8', scrapCost: 20 },
-  { id: 'magenta', name: 'Plasma Magenta', hex: '#e879f9', scrapCost: 35 },
-  { id: 'lime', name: 'Matrix Lime', hex: '#a3e635', scrapCost: 50, requiresMissionId: 'patrol-grid' },
-  { id: 'gold', name: 'Auric Gold', hex: '#fbbf24', scrapCost: 0, requiresMissionId: 'core-dust' },
-  { id: 'crimson', name: 'Crimson Core', hex: '#f43f5e', scrapCost: 45, requiresMissionId: 'signal-hunt' },
-  { id: 'violet', name: 'Void Violet', hex: '#a78bfa', scrapCost: 60, requiresMissionId: 'deep-sync' },
+  { id: 'blue', name: 'Blue', hex: '#3b82f6', scrapCost: 0, starter: true },
+  { id: 'white', name: 'White', hex: '#e2e8f0', scrapCost: 0, starter: true },
+  { id: 'gray', name: 'Gray', hex: '#64748b', scrapCost: 0, starter: true },
+  {
+    id: 'green',
+    name: 'Green',
+    hex: '#22c55e',
+    scrapCost: 0,
+    requiresMissionId: 'junkyard',
+  },
+  {
+    id: 'yellow',
+    name: 'Yellow',
+    hex: '#eab308',
+    scrapCost: 0,
+    requiresMissionId: 'speed-test',
+  },
+  {
+    id: 'red',
+    name: 'Red',
+    hex: '#ef4444',
+    scrapCost: 0,
+    requiresMissionId: 'first-battle',
+  },
+  {
+    id: 'purple',
+    name: 'Purple',
+    hex: '#a855f7',
+    scrapCost: 0,
+    requiresMissionId: 'rival-signal',
+  },
+  {
+    id: 'black',
+    name: 'Black',
+    hex: '#1e293b',
+    scrapCost: 0,
+    requiresPvpWins: 3,
+  },
+  {
+    id: 'gold',
+    name: 'Gold',
+    hex: '#f59e0b',
+    scrapCost: 0,
+    requiresMissionId: 'tournament',
+  },
+  {
+    id: 'rainbow',
+    name: 'Rainbow',
+    hex: '#ec4899',
+    scrapCost: 0,
+    requiresAllMissions: true,
+    requiresDefeatOpponentId: 'gold-titan',
+    comingSoon: true,
+  },
 ]
 
 export function getColorById(id: string): ColorDef | undefined {

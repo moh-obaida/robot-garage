@@ -1,168 +1,417 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { COLORS } from '../data/colors'
-import { MISSIONS } from '../data/missions'
-import { computeStats, upgradePrice } from '../data/upgrades'
-import type { RobotStats, UpgradeId } from '../types/game'
+import { OPPONENTS } from '../data/opponents'
+import { computeCombatStats, nextUpgradeCost } from '../data/upgrades'
+import type { CombatStats, UpgradeId } from '../types/game'
+import type { MiniGameResult } from '../types/quests'
+import { canStartQuest, getQuestById } from '../utils/questEngine'
+import { levelFromTotalXp } from '../utils/progression'
+import {
+  DEFAULT_SNAPSHOT,
+  STORAGE_V1,
+  STORAGE_V2,
+  loadInitialSnapshot,
+  type MigratedSnapshot,
+} from '../utils/saveMigration'
 
-const STORAGE_KEY = 'robot-garage-save-v1'
+export type { MigratedSnapshot as GameSnapshot }
 
-export interface GameSnapshot {
-  scrap: number
-  robotName: string
-  paintColorId: string
-  upgradeLevels: Record<UpgradeId, number>
-  unlockedColors: string[]
-  completedMissions: string[]
-  arenaWins: number
-  arenaLosses: number
-}
-
-const starterColors = COLORS.filter((c) => c.starter).map((c) => c.id)
-
-interface GameState extends GameSnapshot {
+interface GameState extends MigratedSnapshot {
+  levelUpToast: string | null
   renameRobot: (name: string) => void
-  addScrap: (n: number) => void
-  tryBuyUpgrade: (id: UpgradeId) => boolean
-  tryCompleteMission: (missionId: string) => { ok: boolean; message?: string }
-  tryUnlockColorWithScrap: (colorId: string) => { ok: boolean; message?: string }
+  setLevelUpToast: (msg: string | null) => void
+  addXp: (n: number) => void
+  tryBuyUpgrade: (id: UpgradeId) => { ok: boolean; message?: string }
+  startQuestPlay: (questId: string) => { ok: boolean; message?: string }
+  completeQuestWithResult: (
+    questId: string,
+    result: MiniGameResult,
+  ) => { ok: boolean; message?: string }
   equipColor: (colorId: string) => { ok: boolean; message?: string }
-  recordArenaResult: (won: boolean, scrapGain?: number) => void
+  tryUnlockColorWithScrap: (colorId: string) => { ok: boolean; message?: string }
+  applyArenaRewards: (won: boolean, opponentId: string) => void
   resetProgress: () => void
+  selectRobot: (robotId: string) => void
+  syncColorUnlocks: () => void
 }
 
-const defaultSnapshot: GameSnapshot = {
-  scrap: 30,
-  robotName: 'Unit-07',
-  paintColorId: 'cyan',
-  upgradeLevels: { chassis: 0, actuators: 0, plating: 0, gyros: 0 },
-  unlockedColors: [...starterColors],
-  completedMissions: [],
-  arenaWins: 0,
-  arenaLosses: 0,
+export function collectColorUnlocks(s: MigratedSnapshot): string[] {
+  const add = new Set<string>(s.unlockedColors)
+  for (const o of OPPONENTS) {
+    if (o.unlockColorId && s.defeatedOpponents.includes(o.id)) {
+      add.add(o.unlockColorId)
+    }
+  }
+  for (const c of COLORS) {
+    if (c.comingSoon) continue
+    if (c.starter) {
+      add.add(c.id)
+      continue
+    }
+    if (c.requiresMissionId && s.completedMissions.includes(c.requiresMissionId)) {
+      add.add(c.id)
+    }
+    if (c.requiresPvpWins != null && s.arenaWins >= c.requiresPvpWins) {
+      add.add(c.id)
+    }
+    if (c.id === 'gold') {
+      if (s.completedMissions.includes('tournament') || s.defeatedOpponents.includes('gold-titan')) {
+        add.add('gold')
+      }
+    }
+    if (c.requiresDefeatOpponentId && s.defeatedOpponents.includes(c.requiresDefeatOpponentId)) {
+      add.add(c.id)
+    }
+  }
+  return Array.from(add)
 }
 
-function missionAvailable(completed: string[], missionId: string): boolean {
-  const m = MISSIONS.find((x) => x.id === missionId)
-  if (!m) return false
-  return m.requires.every((r) => completed.includes(r))
+function seed(): MigratedSnapshot & { levelUpToast: null } {
+  const snap = loadInitialSnapshot()
+  return {
+    ...snap,
+    unlockedColors: collectColorUnlocks(snap),
+    level: levelFromTotalXp(snap.xp),
+    levelUpToast: null,
+  }
 }
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
-      ...defaultSnapshot,
+      ...seed(),
+
+      setLevelUpToast: (msg) => set({ levelUpToast: msg }),
+
+      syncColorUnlocks: () => {
+        const s = get()
+        set({ unlockedColors: collectColorUnlocks(s) })
+      },
 
       renameRobot: (name) => {
-        const trimmed = name.trim().slice(0, 24) || 'Unit-07'
+        const trimmed = name.trim().slice(0, 24) || 'Bolt-X'
         set({ robotName: trimmed })
       },
 
-      addScrap: (n) => set((s) => ({ scrap: Math.max(0, s.scrap + n) })),
+      selectRobot: (robotId) => {
+        set({ selectedRobotId: robotId })
+      },
+
+      addXp: (n) => {
+        if (n <= 0) return
+        set((s) => {
+          const prevLv = levelFromTotalXp(s.xp)
+          const xp = s.xp + n
+          const nextLv = levelFromTotalXp(xp)
+          const levelUpToast =
+            nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast
+          return { xp, level: nextLv, levelUpToast }
+        })
+      },
 
       tryBuyUpgrade: (id) => {
         const state = get()
-        const lv = state.upgradeLevels[id] ?? 0
-        const cost = upgradePrice(id, lv)
-        if (state.scrap < cost) return false
+        const lv = state.upgradeLevels[id] ?? 1
+        if (lv >= 5) return { ok: false, message: 'MAX LEVEL' }
+        const cost = nextUpgradeCost(id, lv)
+        if (cost == null) return { ok: false, message: 'MAX LEVEL' }
+        if (state.scrap < cost) return { ok: false, message: 'Not enough scrap.' }
         set({
           scrap: state.scrap - cost,
           upgradeLevels: { ...state.upgradeLevels, [id]: lv + 1 },
         })
-        return true
-      },
-
-      tryCompleteMission: (missionId) => {
-        const state = get()
-        const m = MISSIONS.find((x) => x.id === missionId)
-        if (!m) return { ok: false, message: 'Unknown mission.' }
-        if (state.completedMissions.includes(missionId)) {
-          return { ok: false, message: 'Already completed.' }
-        }
-        if (!missionAvailable(state.completedMissions, missionId)) {
-          return { ok: false, message: 'Prerequisites not met.' }
-        }
-        const newColors = new Set(state.unlockedColors)
-        if (m.unlockColorId) newColors.add(m.unlockColorId)
-        set({
-          scrap: state.scrap + m.rewardScrap,
-          completedMissions: [...state.completedMissions, missionId],
-          unlockedColors: Array.from(newColors),
-        })
         return { ok: true }
       },
 
-      tryUnlockColorWithScrap: (colorId) => {
+      startQuestPlay: (questId) => {
+        const q = getQuestById(questId)
+        if (!q) return { ok: false, message: 'Unknown quest.' }
+        return canStartQuest(q, get())
+      },
+
+      completeQuestWithResult: (questId, result) => {
         const state = get()
-        const c = COLORS.find((x) => x.id === colorId)
-        if (!c) return { ok: false, message: 'Unknown finish.' }
-        if (state.unlockedColors.includes(colorId)) {
-          return { ok: false, message: 'Already unlocked.' }
+        const q = getQuestById(questId)
+        if (!q) return { ok: false, message: 'Unknown quest.' }
+
+        const prev = state.questProgress[questId]
+        const attempts = (prev?.attempts ?? 0) + 1
+        let bestScore = prev?.bestScore
+        if (result.score != null && Number.isFinite(result.score)) {
+          bestScore = bestScore == null ? result.score : Math.max(bestScore, result.score)
         }
-        if (c.scrapCost <= 0 && c.requiresMissionId) {
-          return { ok: false, message: 'Earn this finish by completing its mission.' }
+
+        const alreadyDone = state.completedMissions.includes(questId)
+
+        if (!result.success) {
+          set({
+            questProgress: {
+              ...state.questProgress,
+              [questId]: {
+                completed: alreadyDone,
+                attempts,
+                bestScore,
+                completedAt: prev?.completedAt,
+              },
+            },
+          })
+          return { ok: true }
         }
-        if (c.requiresMissionId && !state.completedMissions.includes(c.requiresMissionId)) {
-          return { ok: false, message: 'Complete the linked mission first.' }
+
+        if (alreadyDone) {
+          set({
+            questProgress: {
+              ...state.questProgress,
+              [questId]: {
+                completed: true,
+                attempts,
+                bestScore,
+                completedAt: prev?.completedAt,
+              },
+            },
+          })
+          return { ok: true }
         }
-        if (c.scrapCost <= 0) {
-          return { ok: false, message: 'Not purchasable with scrap.' }
+
+        const gate = canStartQuest(q, state)
+        if (!gate.ok) {
+          set({
+            questProgress: {
+              ...state.questProgress,
+              [questId]: {
+                completed: false,
+                attempts,
+                bestScore,
+              },
+            },
+          })
+          return { ok: false, message: gate.message ?? 'Cannot complete yet.' }
         }
-        if (state.scrap < c.scrapCost) {
-          return { ok: false, message: 'Not enough scrap.' }
+
+        const prevLv = levelFromTotalXp(state.xp)
+        const xp = state.xp + q.rewardXp
+        const nextLv = levelFromTotalXp(xp)
+        const scrap = state.scrap + q.rewardScrap
+        const completed = [...state.completedMissions, questId]
+        const badges = new Set(state.unlockedBadges)
+        if (q.unlockBadgeId) badges.add(q.unlockBadgeId)
+
+        const partial: MigratedSnapshot = {
+          ...state,
+          scrap,
+          xp,
+          level: nextLv,
+          completedMissions: completed,
+          unlockedBadges: Array.from(badges),
+          questProgress: {
+            ...state.questProgress,
+            [questId]: {
+              completed: true,
+              attempts,
+              bestScore,
+              completedAt: new Date().toISOString(),
+            },
+          },
         }
+
         set({
-          scrap: state.scrap - c.scrapCost,
-          unlockedColors: [...state.unlockedColors, colorId],
+          scrap,
+          xp,
+          level: nextLv,
+          completedMissions: completed,
+          unlockedBadges: Array.from(badges),
+          unlockedColors: collectColorUnlocks(partial),
+          questProgress: partial.questProgress,
+          levelUpToast: nextLv > prevLv ? `Level up! Now level ${nextLv}.` : null,
         })
         return { ok: true }
       },
 
       equipColor: (colorId) => {
         const state = get()
+        const c = COLORS.find((x) => x.id === colorId)
+        if (!c) return { ok: false, message: 'Unknown color.' }
+        if (c.comingSoon) return { ok: false, message: 'Coming soon.' }
         if (!state.unlockedColors.includes(colorId)) {
-          return { ok: false, message: 'Finish not unlocked.' }
+          return { ok: false, message: 'Locked.' }
         }
         set({ paintColorId: colorId })
         return { ok: true }
       },
 
-      recordArenaResult: (won, scrapGain = 0) =>
-        set((s) => ({
-          scrap: won ? s.scrap + scrapGain : s.scrap,
-          arenaWins: won ? s.arenaWins + 1 : s.arenaWins,
-          arenaLosses: won ? s.arenaLosses : s.arenaLosses + 1,
-        })),
+      tryUnlockColorWithScrap: (colorId) => {
+        const state = get()
+        const c = COLORS.find((x) => x.id === colorId)
+        if (!c) return { ok: false, message: 'Unknown color.' }
+        if (c.comingSoon) return { ok: false, message: 'Coming soon.' }
+        if (state.unlockedColors.includes(colorId)) {
+          return { ok: false, message: 'Already unlocked.' }
+        }
+        if (c.scrapCost <= 0) {
+          return { ok: false, message: 'Unlock via missions or conditions.' }
+        }
+        if (state.scrap < c.scrapCost) {
+          return { ok: false, message: 'Not enough scrap.' }
+        }
+        const scrap = state.scrap - c.scrapCost
+        const unlockedColors = [...state.unlockedColors, colorId]
+        const partial: MigratedSnapshot = { ...state, scrap, unlockedColors }
+        set({
+          scrap,
+          unlockedColors: collectColorUnlocks(partial),
+        })
+        return { ok: true }
+      },
+
+      applyArenaRewards: (won, opponentId) => {
+        const opp = OPPONENTS.find((o) => o.id === opponentId)
+        if (!opp) return
+
+        set((s) => {
+          const wins = won ? s.arenaWins + 1 : s.arenaWins
+          const losses = won ? s.arenaLosses : s.arenaLosses + 1
+          let scrap = s.scrap
+          let xp = s.xp
+          let trophies = s.trophies
+          const defeated = new Set(s.defeatedOpponents)
+          const badges = new Set(s.unlockedBadges)
+
+          if (won) {
+            scrap += opp.rewardScrap
+            xp += opp.rewardXp
+            trophies += opp.rewardTrophies
+            defeated.add(opp.id)
+            if (opp.unlockBadgeId) badges.add(opp.unlockBadgeId)
+          }
+
+          const prevLv = levelFromTotalXp(s.xp)
+          const nextLv = levelFromTotalXp(xp)
+          const levelUpToast = nextLv > prevLv ? `Level up! Now level ${nextLv}.` : s.levelUpToast
+
+          const partial: MigratedSnapshot = {
+            ...s,
+            scrap,
+            xp,
+            level: nextLv,
+            trophies,
+            arenaWins: wins,
+            arenaLosses: losses,
+            defeatedOpponents: Array.from(defeated),
+            unlockedBadges: Array.from(badges),
+          }
+
+          return {
+            scrap,
+            xp,
+            level: nextLv,
+            trophies,
+            arenaWins: wins,
+            arenaLosses: losses,
+            defeatedOpponents: Array.from(defeated),
+            unlockedBadges: Array.from(badges),
+            unlockedColors: collectColorUnlocks(partial),
+            levelUpToast,
+          }
+        })
+      },
 
       resetProgress: () => {
-        localStorage.removeItem(STORAGE_KEY)
-        set({ ...defaultSnapshot })
+        try {
+          localStorage.removeItem(STORAGE_V1)
+          localStorage.removeItem(STORAGE_V2)
+        } catch {
+          /* ignore */
+        }
+        const fresh = seed()
+        set({ ...fresh, levelUpToast: null })
       },
     }),
-    { name: STORAGE_KEY },
+    {
+      name: STORAGE_V2,
+      version: 3,
+      partialize: (s) => ({
+        scrap: s.scrap,
+        xp: s.xp,
+        level: s.level,
+        trophies: s.trophies,
+        selectedRobotId: s.selectedRobotId,
+        robotName: s.robotName,
+        paintColorId: s.paintColorId,
+        upgradeLevels: s.upgradeLevels,
+        unlockedColors: s.unlockedColors,
+        completedMissions: s.completedMissions,
+        questProgress: s.questProgress,
+        arenaWins: s.arenaWins,
+        arenaLosses: s.arenaLosses,
+        defeatedOpponents: s.defeatedOpponents,
+        unlockedBadges: s.unlockedBadges,
+      }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<MigratedSnapshot>
+        const merged: MigratedSnapshot = {
+          ...DEFAULT_SNAPSHOT,
+          ...current,
+          ...p,
+          upgradeLevels: {
+            ...DEFAULT_SNAPSHOT.upgradeLevels,
+            ...(p.upgradeLevels ?? {}),
+          },
+          questProgress: {
+            ...DEFAULT_SNAPSHOT.questProgress,
+            ...((current as MigratedSnapshot).questProgress ?? {}),
+            ...(p.questProgress ?? {}),
+          },
+        }
+        merged.level = levelFromTotalXp(merged.xp)
+        merged.unlockedColors = collectColorUnlocks(merged)
+        return { ...current, ...merged, levelUpToast: null }
+      },
+    },
   ),
 )
 
+export function selectCombatStats(upgradeLevels: Record<UpgradeId, number>): CombatStats {
+  return computeCombatStats(upgradeLevels)
+}
+
 export function selectRobotStats(upgradeLevels: Record<UpgradeId, number>) {
-  return computeStats(upgradeLevels)
+  const st = computeCombatStats(upgradeLevels)
+  return {
+    maxHp: st.hp,
+    attack: st.power,
+    defense: st.armor,
+    speed: st.speed,
+  }
 }
 
-export function selectCurrentHpCap(stats: RobotStats) {
-  return stats.maxHp
-}
+export { xpProgress, rankFromTrophies, levelFromTotalXp } from '../utils/progression'
 
-/** For arena: clone stats for battle */
-export function buildPlayerCombatants(
-  state: Pick<GameSnapshot, 'robotName' | 'paintColorId' | 'upgradeLevels'>,
+export function buildPlayerBattleProfile(
+  state: Pick<MigratedSnapshot, 'robotName' | 'paintColorId' | 'upgradeLevels'>,
 ) {
-  const stats = computeStats(state.upgradeLevels)
+  const st = computeCombatStats(state.upgradeLevels)
   return {
     name: state.robotName,
-    maxHp: stats.maxHp,
-    hp: stats.maxHp,
-    attack: stats.attack,
-    defense: stats.defense,
-    speed: stats.speed,
-    color: state.paintColorId,
+    colorId: state.paintColorId,
+    maxHp: st.hp,
+    maxEnergy: st.energy,
+    power: st.power,
+    armor: st.armor,
+    speed: st.speed,
+  }
+}
+
+export function buildPlayerCombatants(
+  state: Pick<MigratedSnapshot, 'robotName' | 'paintColorId' | 'upgradeLevels'>,
+) {
+  const p = buildPlayerBattleProfile(state)
+  return {
+    name: p.name,
+    colorId: p.colorId,
+    maxHp: p.maxHp,
+    attack: p.power,
+    defense: p.armor,
+    speed: p.speed,
   }
 }

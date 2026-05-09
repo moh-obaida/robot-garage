@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { UPGRADE_META, upgradePrice } from '../data/upgrades'
+import { UPGRADE_META, nextUpgradeCost } from '../data/upgrades'
 import type { UpgradeId } from '../types/game'
 import { Panel } from '../components/Panel'
 import { useGameStore } from '../store/useGameStore'
@@ -11,8 +11,8 @@ export function Upgrades() {
   const [msg, setMsg] = useState<string | null>(null)
 
   const onBuy = (id: UpgradeId) => {
-    const ok = tryBuy(id)
-    setMsg(ok ? 'Upgrade installed.' : 'Not enough scrap.')
+    const r = tryBuy(id)
+    setMsg(r.ok ? 'Upgrade installed.' : r.message ?? 'Cannot install.')
     window.setTimeout(() => setMsg(null), 2200)
   }
 
@@ -26,9 +26,10 @@ export function Upgrades() {
       <ul className="grid gap-4 md:grid-cols-2">
         {(Object.keys(UPGRADE_META) as UpgradeId[]).map((id) => {
           const meta = UPGRADE_META[id]
-          const lv = levels[id] ?? 0
-          const cost = upgradePrice(id, lv)
-          const affordable = scrap >= cost
+          const lv = levels[id] ?? 1
+          const cost = nextUpgradeCost(id, lv)
+          const maxed = cost == null
+          const affordable = !maxed && scrap >= (cost ?? 0)
           return (
             <li
               key={id}
@@ -48,11 +49,11 @@ export function Upgrades() {
               <div className="mt-4 flex items-center justify-between gap-2">
                 <span className="text-sm text-amber-200/90">
                   <span className="text-slate-500">Next: </span>
-                  {cost} scrap
+                  {maxed ? 'MAX' : `${cost} scrap`}
                 </span>
                 <button
                   type="button"
-                  disabled={!affordable}
+                  disabled={!affordable || maxed}
                   onClick={() => onBuy(id)}
                   className={`rounded-lg px-4 py-2 text-sm font-bold ${
                     affordable
